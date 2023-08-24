@@ -34,27 +34,13 @@ namespace PhysicsCanvas
 		Windows::UI::Core::CoreWindow^ wnd;
 		MoveLookControls^ controller;
 		DirectX::XMMATRIX projectionMat;
-		DirectX::XMVECTORF32 eye = { 0.0f, 0.7f, 1.5f, 0.0f };
-		DirectX::XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
+
 		DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 	private:
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
-		// Direct3D resources for cube geometry.
-		Microsoft::WRL::ComPtr<ID3DBlob>			m_blob;
-		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
-		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
-
-		// System resources for cube geometry.
-		
-		CBUFF m_cBufferData;
-		uint32	m_indexCount;
-
+		// List of all meshes in the scene
 		std::list<std::shared_ptr<Mesh>> meshes;
 
 		// Variables used with the rendering loop.
