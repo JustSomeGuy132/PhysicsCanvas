@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "PhysicsCanvasMain.h"
 #include "Common\DirectXHelper.h"
+#include <conio.h>
 
 using namespace PhysicsCanvas;
 using namespace Windows::Foundation;
@@ -8,7 +9,7 @@ using namespace Windows::System::Threading;
 using namespace Concurrency;
 
 // Loads and initializes application assets when the application is loaded.
-PhysicsCanvasMain::PhysicsCanvasMain(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
+PhysicsCanvas::PhysicsCanvasMain::PhysicsCanvasMain(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
 	m_deviceResources(deviceResources)
 {
 	// Register to be notified if the Device is lost or recreated
@@ -27,34 +28,36 @@ PhysicsCanvasMain::PhysicsCanvasMain(const std::shared_ptr<DX::DeviceResources>&
 	*/
 }
 
-PhysicsCanvasMain::~PhysicsCanvasMain()
+PhysicsCanvas::PhysicsCanvasMain::~PhysicsCanvasMain()
 {
 	// Deregister device notification
 	m_deviceResources->RegisterDeviceNotify(nullptr);
 }
 
 // Updates application state when the window size changes (e.g. device orientation change)
-void PhysicsCanvasMain::CreateWindowSizeDependentResources() 
+void PhysicsCanvas::PhysicsCanvasMain::CreateWindowSizeDependentResources()
 {
 	// TODO: Replace this with the size-dependent initialization of your app's content.
 	m_sceneRenderer->CreateWindowSizeDependentResources();
 }
 
 // Updates the application state once per frame.
-void PhysicsCanvasMain::Update() 
+void PhysicsCanvas::PhysicsCanvasMain::Update()
 {
+	
 	// Update scene objects.
 	m_timer.Tick([&]()
 	{
 		// TODO: Replace this with your app's content update functions.
-		m_sceneRenderer->Update(m_timer);
+			m_sceneRenderer->Update(m_timer);
 		m_fpsTextRenderer->Update(m_timer);
 	});
 }
 
+
 // Renders the current frame according to the current application state.
 // Returns true if the frame was rendered and is ready to be displayed.
-bool PhysicsCanvasMain::Render() 
+bool PhysicsCanvas::PhysicsCanvasMain::Render()
 {
 	// Don't try to render anything before the first Update.
 	if (m_timer.GetFrameCount() == 0)
@@ -85,14 +88,14 @@ bool PhysicsCanvasMain::Render()
 }
 
 // Notifies renderers that device resources need to be released.
-void PhysicsCanvasMain::OnDeviceLost()
+void PhysicsCanvas::PhysicsCanvasMain::OnDeviceLost()
 {
 	m_sceneRenderer->ReleaseDeviceDependentResources();
 	m_fpsTextRenderer->ReleaseDeviceDependentResources();
 }
 
 // Notifies renderers that device resources may now be recreated.
-void PhysicsCanvasMain::OnDeviceRestored()
+void PhysicsCanvas::PhysicsCanvasMain::OnDeviceRestored()
 {
 	m_sceneRenderer->CreateDeviceDependentResources();
 	m_fpsTextRenderer->CreateDeviceDependentResources();

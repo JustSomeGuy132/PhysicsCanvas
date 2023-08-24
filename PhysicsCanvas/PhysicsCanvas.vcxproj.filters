@@ -8,13 +8,10 @@
       <UniqueIdentifier>6756bf44-9bff-4f3e-ad44-72c8b408b3fe</UniqueIdentifier>
       <Extensions>bmp;fbx;gif;jpg;jpeg;tga;tiff;tif;png</Extensions>
     </Filter>
-	<Filter Include="Content">
-      <UniqueIdentifier>178d4c2f-165f-45c0-8b5b-32f4e67af4a2</UniqueIdentifier>
-    </Filter>
     <ClInclude Include="Common\DirectXHelper.h">
       <Filter>Common</Filter>
     </ClInclude>
-	<ClInclude Include="Common\StepTimer.h">
+    <ClInclude Include="Common\StepTimer.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\DeviceResources.h">
@@ -23,26 +20,26 @@
     <ClCompile Include="Common\DeviceResources.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-	<ClInclude Include="Content\Sample3DSceneRenderer.h">
-      <Filter>Content</Filter>
+    <ClInclude Include="Content\Sample3DSceneRenderer.h">
+      <Filter>SampleContent</Filter>
     </ClInclude>
     <ClInclude Include="Content\SampleFpsTextRenderer.h">
-      <Filter>Content</Filter>
+      <Filter>SampleContent</Filter>
     </ClInclude>
     <ClInclude Include="Content\ShaderStructures.h">
-      <Filter>Content</Filter>
+      <Filter>SampleContent</Filter>
     </ClInclude>
-	<ClCompile Include="Content\Sample3DSceneRenderer.cpp">
-      <Filter>Content</Filter>
+    <ClCompile Include="Content\Sample3DSceneRenderer.cpp">
+      <Filter>SampleContent</Filter>
     </ClCompile>
     <ClCompile Include="Content\SampleFpsTextRenderer.cpp">
-      <Filter>Content</Filter>
+      <Filter>SampleContent</Filter>
     </ClCompile>
-	<FxCompile Include="Content\SamplePixelShader.hlsl">
-      <Filter>Content</Filter>
+    <FxCompile Include="Content\SamplePixelShader.hlsl">
+      <Filter>SampleContent</Filter>
     </FxCompile>
     <FxCompile Include="Content\SampleVertexShader.hlsl">
-      <Filter>Content</Filter>
+      <Filter>SampleContent</Filter>
     </FxCompile>
     <Image Include="Assets\LockScreenLogo.scale-200.png">
       <Filter>Assets</Filter>
@@ -62,5 +59,73 @@
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{59f0bced-98d6-4105-9853-9b1ee78e3993}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{5ba6b964-caae-461d-b5eb-373daa283524}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SampleContent">
+      <UniqueIdentifier>178d4c2f-165f-45c0-8b5b-32f4e67af4a2</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysicsCanvasMain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Keyboard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Mouse.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MoveLookControls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsCanvasMain.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Keyboard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Mouse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MoveLookControls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\StoreLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="MyVertexShader.hlsl">
+      <Filter>SampleContent</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

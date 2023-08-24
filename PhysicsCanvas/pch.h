@@ -13,3 +13,6 @@
 #include <memory>
 #include <agile.h>
 #include <concrt.h>
+
+#define WIN32_LEAN_AND_MEAN
+#include <sdkddkver.h>

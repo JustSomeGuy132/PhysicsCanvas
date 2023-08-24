@@ -16,4 +16,9 @@ namespace PhysicsCanvas
 		DirectX::XMFLOAT3 pos;
 		DirectX::XMFLOAT3 color;
 	};
+
+	//The better constant buffer
+	struct CBUFF {
+		DirectX::XMMATRIX transform;
+	};
 }

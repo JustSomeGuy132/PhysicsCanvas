@@ -4,6 +4,12 @@
 #include "Common\DeviceResources.h"
 #include "Content\Sample3DSceneRenderer.h"
 #include "Content\SampleFpsTextRenderer.h"
+#include "Keyboard.h"
+#include "Mouse.h"
+#include "MoveLookControls.h"
+#include <optional>
+#include <memory>
+#include <Windows.h>
 
 // Renders Direct2D and 3D content on the screen.
 namespace PhysicsCanvas
@@ -20,7 +26,7 @@ namespace PhysicsCanvas
 		// IDeviceNotify
 		virtual void OnDeviceLost();
 		virtual void OnDeviceRestored();
-
+		
 	private:
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
