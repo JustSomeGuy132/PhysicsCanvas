@@ -2,19 +2,9 @@
 #include "MoveLookControls.h"
 #include "..\Common\DirectXHelper.h"
 #include <iostream>
-#pragma lib(lib, "user32.lib")
 
 using namespace PhysicsCanvas;
 using namespace Windows::Foundation;
-//using namespace concurrency;
-//using namespace Windows::ApplicationModel;
-//using namespace Windows::ApplicationModel::Core;
-//using namespace Windows::ApplicationModel::Activation;
-//using namespace Windows::UI::Core;
-//using namespace Windows::UI::Input;
-//using namespace Windows::System;
-//using namespace Windows::Foundation;
-//using namespace Windows::Graphics::Display;
 
 namespace wnUIc = Windows::UI::Core;
 
@@ -85,11 +75,10 @@ void MoveLookControls::Update(wnUIc::CoreWindow^ window) {
 
 void MoveLookControls::OnKeyDown(wnUIc::CoreWindow^ sender, wnUIc::KeyEventArgs^ args) {
 
-	//detect which key was pressed
 	Windows::System::VirtualKey key;
 	key = args->VirtualKey;
 	//handle the keypress
-	if(m_lookInUse) {
+	if (m_lookInUse) {
 		if (key == Windows::System::VirtualKey::W) {
 			m_forward = true;
 		}
@@ -109,6 +98,7 @@ void MoveLookControls::OnKeyDown(wnUIc::CoreWindow^ sender, wnUIc::KeyEventArgs^
 			m_up = true;
 		}
 	}
+	
 }
 
 void MoveLookControls::OnKeyUp(wnUIc::CoreWindow^ sender, wnUIc::KeyEventArgs^ args) {

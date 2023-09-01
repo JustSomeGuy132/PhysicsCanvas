@@ -6,9 +6,11 @@
 #include "..\Common\StepTimer.h"
 #include "..\Common\DirectXHelper.h"
 #include "MoveLookControls.h"
-#include "Mesh.h"
+#include "PhysicsBody.h"
 #include <list>
-#include "d3dcompiler.h"
+#include "..\ImGUI\imgui.h"
+#include "..\ImGUI\imgui_impl_win32.h"
+#include "..\ImGUI\imgui_impl_dx11.h"
 
 namespace PhysicsCanvas
 {
@@ -22,12 +24,10 @@ namespace PhysicsCanvas
 		void ReleaseDeviceDependentResources();
 		void Update(DX::StepTimer const& timer);
 		void Render();
-		void StartTracking();
-		void TrackingUpdate(float positionX);
-		void StopTracking();
-		bool IsTracking() { return m_tracking; }
 		void CreateNewMesh();
-
+		
+		float u_Time;
+		void Step();
 	private:
 		void STransform(float radians);
 	private:
@@ -36,18 +36,22 @@ namespace PhysicsCanvas
 		DirectX::XMMATRIX projectionMat;
 
 		DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
+
+		bool isStepping;
 	private:
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
 		// List of all meshes in the scene
-		std::list<std::shared_ptr<Mesh>> meshes;
+		std::list<std::shared_ptr<PhysicsBody>> pBodies;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;
 		float	m_degreesPerSecond;
-		bool	m_tracking;
-		
+	private:
+		Microsoft::WRL::ComPtr<ID3D11Device> m_device;
+		Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_deviceContext;
+		Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
+
 	};
 }
-

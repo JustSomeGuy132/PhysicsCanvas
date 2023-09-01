@@ -15,6 +15,10 @@ PhysicsCanvas::PhysicsCanvasMain::PhysicsCanvasMain(const std::shared_ptr<DX::De
 	// Register to be notified if the Device is lost or recreated
 	m_deviceResources->RegisterDeviceNotify(this);
 
+	/*ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());*/
+
 	// TODO: Replace this with your app's content initialization.
 	m_sceneRenderer = std::unique_ptr<Sample3DSceneRenderer>(new Sample3DSceneRenderer(m_deviceResources));
 
@@ -26,6 +30,7 @@ PhysicsCanvas::PhysicsCanvasMain::PhysicsCanvasMain(const std::shared_ptr<DX::De
 	m_timer.SetFixedTimeStep(true);
 	m_timer.SetTargetElapsedSeconds(1.0 / 60);
 	*/
+
 }
 
 PhysicsCanvas::PhysicsCanvasMain::~PhysicsCanvasMain()
@@ -49,7 +54,7 @@ void PhysicsCanvas::PhysicsCanvasMain::Update()
 	m_timer.Tick([&]()
 	{
 		// TODO: Replace this with your app's content update functions.
-			m_sceneRenderer->Update(m_timer);
+		m_sceneRenderer->Update(m_timer);
 		m_fpsTextRenderer->Update(m_timer);
 	});
 }

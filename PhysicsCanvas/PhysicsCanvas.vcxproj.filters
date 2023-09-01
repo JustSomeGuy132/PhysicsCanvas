@@ -68,6 +68,9 @@
     <Filter Include="SampleContent">
       <UniqueIdentifier>178d4c2f-165f-45c0-8b5b-32f4e67af4a2</UniqueIdentifier>
     </Filter>
+    <Filter Include="ImGui">
+      <UniqueIdentifier>{820b198c-3030-4895-a7d3-d35fcb65b8b7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp">
@@ -112,6 +115,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsBody.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Force.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PEvent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

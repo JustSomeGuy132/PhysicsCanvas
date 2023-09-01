@@ -7,7 +7,7 @@ using namespace DirectX;
 
 void Mesh::Create(const std::shared_ptr<DX::DeviceResources>& deviceResources) {
 	m_deviceResources = deviceResources;
-	
+
 	//create pixel shader
 	D3DReadFileToBlob(L"SamplePixelShader.cso", &m_blob);
 	m_deviceResources->GetD3DDevice()->CreatePixelShader(
@@ -53,7 +53,7 @@ void Mesh::Create(const std::shared_ptr<DX::DeviceResources>& deviceResources) {
 		{XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 1.0f)},
 		{XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f)},
 		{XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f)},
-		{XMFLOAT3(0.5f,  1.0f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f)},
+		{XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f)},
 		{XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(0.7f, 1.0f, 2.0f)},
 	};
 	CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(cubeVertices), D3D11_BIND_VERTEX_BUFFER);
@@ -93,7 +93,7 @@ void Mesh::Create(const std::shared_ptr<DX::DeviceResources>& deviceResources) {
 	m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_indexBuffer);
 	m_deviceResources->GetD3DDeviceContext()->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 	m_loadingComplete = true;
-	
+
 }
 
 void Mesh::Render(DirectX::XMMATRIX viewprojMat) {
@@ -143,9 +143,9 @@ void Mesh::Render(DirectX::XMMATRIX viewprojMat) {
 }
 
 
-void Mesh::UpdateWorldMat(DirectX::XMFLOAT3 translation, DirectX::XMFLOAT3 rotation) {
-	worldMat = DirectX::XMMatrixRotationX(rotation.x) * 
-		DirectX::XMMatrixRotationY(rotation.y) * 
+void Mesh::SetWorldMat(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 rotation) {
+	worldMat = DirectX::XMMatrixRotationX(rotation.x) *
+		DirectX::XMMatrixRotationY(rotation.y) *
 		DirectX::XMMatrixRotationZ(rotation.z) *
-		DirectX::XMMatrixTranslation(translation.x, translation.y, translation.z);
+		DirectX::XMMatrixTranslation(position.x, position.y, position.z);
 }

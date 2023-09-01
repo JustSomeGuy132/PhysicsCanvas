@@ -4,6 +4,8 @@
 #include "..\Common\DeviceResources.h"
 #include "..\Common\StepTimer.h"
 #include "..\Common\DirectXHelper.h"
+#include "..\ImGUI\imgui.h"
+#include "..\ImGUI\imgui_impl_dx11.h" 
 
 namespace PhysicsCanvas {
 	ref class MoveLookControls {

@@ -8,7 +8,7 @@
 namespace PhysicsCanvas {
 	class Mesh {
 	public:
-		void Create(const std::shared_ptr<DX::DeviceResources> &deviceResources);
+		void Create(const std::shared_ptr<DX::DeviceResources>& deviceResources);
 		void Render(DirectX::XMMATRIX viewprojMat);
 
 		void ReleaseResources() {
@@ -20,7 +20,7 @@ namespace PhysicsCanvas {
 			m_vertexBuffer.Reset();
 			m_indexBuffer.Reset();
 		}
-		void UpdateWorldMat(DirectX::XMFLOAT3 translation, DirectX::XMFLOAT3 rotation);
+		void SetWorldMat(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 rotation);
 	private:
 		//VertexPositionColor vertices[];
 		//static unsigned short indices[];
