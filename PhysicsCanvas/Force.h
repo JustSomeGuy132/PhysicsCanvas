@@ -40,6 +40,10 @@ namespace PhysicsCanvas {
 			return result;
 		}
 
+		DirectX::XMFLOAT3 GetDirection() {
+			return direction;
+		}
+
 		static Force ResultantF(std::list<Force> forces) {
 			Force result(ForceType::Constant, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
 			for (Force f : forces) {
@@ -50,6 +54,25 @@ namespace PhysicsCanvas {
 			return result;
 		}
 
+		bool operator == (Force f1) {
+			if (type != f1.type) {
+				return false;
+			}
+			if (direction.x != f1.direction.x || direction.y != f1.direction.y || direction.z != f1.direction.z) {
+				return false;
+			}
+			if (GetId() != f1.GetId()) {
+				return false;
+			}
+			if (GetStart() != f1.GetStart()) {
+				return false;
+			}
+			if (GetEnd() != f1.GetEnd()) {
+				return false;
+			}
+			return true;
+		}
+
 		DirectX::XMFLOAT3 operator / (float m) {
 			DirectX::XMFLOAT3 temp(direction);
 			temp.x = direction.x / m;
@@ -57,8 +80,6 @@ namespace PhysicsCanvas {
 			temp.z = direction.z / m;
 			return temp;
 		}
-
-		std::string GetType() const { return "Force"; }
 
 	private:
 		ForceType type;

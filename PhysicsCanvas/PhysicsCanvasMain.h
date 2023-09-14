@@ -4,8 +4,6 @@
 #include "Common\DeviceResources.h"
 #include "Content\Sample3DSceneRenderer.h"
 #include "Content\SampleFpsTextRenderer.h"
-#include "Keyboard.h"
-#include "Mouse.h"
 #include "MoveLookControls.h"
 #include <optional>
 #include <memory>

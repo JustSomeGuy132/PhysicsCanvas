@@ -14,6 +14,7 @@
 #include <agile.h>
 #include <concrt.h>
 
+#define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <sdkddkver.h>
 #define __cplusplus_winrt

@@ -24,7 +24,7 @@ namespace PhysicsCanvas
 		void ReleaseDeviceDependentResources();
 		void Update(DX::StepTimer const& timer);
 		void Render();
-		void CreateNewMesh();
+		void CreateNewMesh(const UINT shape);
 		
 		float u_Time;
 		void Step();

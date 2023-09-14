@@ -2,7 +2,8 @@
 #include "Sample3DSceneRenderer.h"
 
 #include "..\Common\DirectXHelper.h"
-#include "Wrappers.h"
+#include <sstream>
+//#include "Wrappers.h"
 
 using namespace PhysicsCanvas;
 
@@ -55,7 +56,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		fovAngleY,
 		aspectRatio,
 		0.01f,		//near z
-		100.0f		//far z
+		1000.0f		//far z
 	);
 
 	//get access to window so as to pass into controller, initialise controller
@@ -66,10 +67,16 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 	controller->SetOrientation(-0.3f, 0.0f);
 }
 
-// Called once per frame, rotates the cube and calculates the model and view matrices.
+// Called once per frame
 void Sample3DSceneRenderer::Update(DX::StepTimer const& timer) {
 
 	controller->Update(wnd);	//updates position and rotation of camera based on input
+	//ensure camera controller can't go beneath the floor
+	if (controller->get_Position().y <= 0.1f) {
+		controller->SetPosition(
+			XMFLOAT3(controller->get_Position().x, 0.2f, controller->get_Position().z)
+		);
+	}
 
 	if (isStepping) {
 		Step();
@@ -77,6 +84,34 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer) {
 }
 
 void Sample3DSceneRenderer::Step() {
+	
+	int i = 0;
+	for (std::shared_ptr<PhysicsBody> body1 : pBodies) {
+		int j = 0;
+		for (std::shared_ptr<PhysicsBody> body2 : pBodies) {
+			//make sure not to check collisions on the same object
+			if(i != j) {
+				std::ostringstream outstr;
+				outstr << "u_Time = " << u_Time << "s\n";
+				OutputDebugString(outstr.str().c_str());
+				//if body1 is colliding with body2
+				if (BoundingShape::IsColliding(body1->GetBounds(), body2->GetBounds())) {
+					OutputDebugString("COLLISION DETECTED!!");
+					std::vector<XMFLOAT3> translations = BoundingShape::ResolveCollisions(body1->GetBounds(), body2->GetBounds());
+					body1->ApplyTranslation(translations[0]);
+					body2->ApplyTranslation(translations[1]);
+					
+					body1->RegisterCollision(body2, u_Time);
+					//body2->RegisterCollision(body1, u_Time);
+				}
+				else {
+					
+				}
+			}
+			j++;
+		}
+		i++;
+	}
 	u_Time += 0.001f;
 	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
 		body->Step(u_Time);
@@ -84,16 +119,7 @@ void Sample3DSceneRenderer::Step() {
 }
 
 void Sample3DSceneRenderer::STransform(float radians) {
-	int i = 0;
-	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
-		if (i == 0) {
-			body->SetTransform(XMFLOAT3(1.0f, 0.0f, -0.2f), XMFLOAT3(0, radians, 0));
-		}
-		else {
-			body->SetTransform(XMFLOAT3(-0.7f, 0.0f, -0.2f), XMFLOAT3(0, -radians, 0));
-		}
-		i++;
-	}
+	
 }
 
 
@@ -115,16 +141,23 @@ void Sample3DSceneRenderer::Render() {
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());*/
 }
 
-void Sample3DSceneRenderer::CreateNewMesh() {
+void Sample3DSceneRenderer::CreateNewMesh(const UINT shape) {
 	PhysicsBody body;
-	body.Create(m_deviceResources);
-	body.AddForce(Force::ForceType::Impulse, XMFLOAT3(0.0f, 1500.0f, 0.0f));
-	pBodies.push_front(std::make_shared<PhysicsBody>(body));
+	body.Create(shape, m_deviceResources);
+	body.GiveName("OBJ1");
+	body.ApplyTranslation(DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f));
+	//body.AddForce(Force::Impulse, XMFLOAT3(0.0f, 1500.0f, 0.0f), 0.0f);
+	pBodies.push_back(std::make_shared<PhysicsBody>(body));
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
-	CreateNewMesh();
+	PhysicsBody floor;
+	floor.Create(FLOOR, m_deviceResources);
+	floor.GiveName("FLOOR");
+	pBodies.push_back(std::make_shared<PhysicsBody>(floor));
+	CreateNewMesh(CUBE);
+	//CreateNewMesh(SPHERE);
 }
 
 
