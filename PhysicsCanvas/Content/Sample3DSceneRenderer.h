@@ -27,7 +27,7 @@ namespace PhysicsCanvas
 		void CreateNewMesh(const UINT shape);
 		
 		float u_Time;
-		void Step();
+		void Step(DX::StepTimer const& timer);
 	private:
 		void STransform(float radians);
 	private:

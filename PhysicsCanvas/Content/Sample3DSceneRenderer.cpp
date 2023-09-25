@@ -79,11 +79,11 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer) {
 	}
 
 	if (isStepping) {
-		Step();
+		Step(timer);
 	}
 }
 
-void Sample3DSceneRenderer::Step() {
+void Sample3DSceneRenderer::Step(DX::StepTimer const& timer) {
 	
 	int i = 0;
 	for (std::shared_ptr<PhysicsBody> body1 : pBodies) {
@@ -113,6 +113,7 @@ void Sample3DSceneRenderer::Step() {
 		i++;
 	}
 	u_Time += 0.001f;
+	//u_Time += timer.GetElapsedSeconds();
 	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
 		body->Step(u_Time);
 	}

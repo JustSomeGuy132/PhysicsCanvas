@@ -119,11 +119,6 @@ namespace PhysicsCanvas {
 			
 			//handle reaction forces for the objects having contact
 			std::string fName = "Reaction force due to " + coll->GetName();
-			for (Force f : forces) {
-				if (f.GetId() == fName && time < f.GetEnd()) {
-					return; //if a force due to this collision already exists and is currently being applied, do not register a new collision
-				}
-			}
 			collisions.push_back(std::make_tuple(coll, fName));	//register the PhysicsBody "coll" as one that is colliding with this body
 			DirectX::XMFLOAT3 Rdir(coll->position.x - position.x, coll->position.y - position.y, coll->position.z - position.z);
 			Rdir.x *= ResultantActiveForces(time).GetDirection().x;
@@ -133,7 +128,17 @@ namespace PhysicsCanvas {
 			reactionF.SetId(fName);
 			reactionF.SetStart(time);
 			reactionF.SetEnd(-0.5f);
-			AddForce(reactionF);
+			bool flag = false;
+			for (Force& f : forces) {
+				if (f.GetId() == fName) {
+					f = reactionF;
+					flag = true;
+					break;
+				}
+			}
+			if(!flag)
+				AddForce(reactionF);
+
 			std::ostringstream oss;
 			oss << "Added a collision to " << GetName() << ", force(" << Rdir.x << ", " << Rdir.y << ", " << Rdir.z << ")\n";
 			OutputDebugString(oss.str().c_str());
@@ -143,16 +148,25 @@ namespace PhysicsCanvas {
 					position.y - coll->GetPosition().y,
 					position.z - coll->GetPosition().z
 			);
-			dir.x *= Momentum().x / 0.002f;	//
-			dir.y *= Momentum().y / 0.002f;	// F = p/t
-			dir.z *= Momentum().z / 0.002f;	//
+			dir.x *= -Momentum().x / 0.003f;	//
+			dir.y *= -Momentum().y / 0.003f;	// F = p/t
+			dir.z *= -Momentum().z / 0.003f;	//
 
-			Force f(Force::Impulse, DirectX::XMFLOAT3(-dir.x, -dir.y, -dir.z));
+			Force f(Force::Impulse, DirectX::XMFLOAT3(dir.x - Rdir.x, dir.y - Rdir.y, dir.z - Rdir.z));
 			f.SetStart(time);
 			fName = "Collision force due to " + coll->GetName();
 			f.SetId(fName);
 			std::ostringstream outstr;
-			AddForce(f);
+			flag = false;
+			for (Force& f0 : forces) {
+				if (f0.GetId() == fName) {
+					f0 = f;
+					flag = true;
+					break;
+				}
+			}
+			if(!flag)
+				AddForce(f);
 			outstr << "Added force --" << fName << "-- to " << GetName()
 				<< " With direction = (" << -dir.x << ", " << -dir.y << ", " << -dir.z << ")" << "\n";
 			OutputDebugString(outstr.str().c_str());
@@ -217,10 +231,8 @@ namespace PhysicsCanvas {
 					}
 				}
 			}
-			for (Force foo : activeForces) {
-				std::ostringstream str;
-				str << foo.GetId() << "= (" << foo.GetDirection().x << ", " << foo.GetDirection().y << ", " << foo.GetDirection().z  << ")\n";
-				OutputDebugString(str.str().c_str());
+			for (Force foo : forces) {
+				Force::PrintForce(foo);
 			}
 			ApplyTranslation(translation);
 		}

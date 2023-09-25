@@ -3,6 +3,7 @@
 #include <DirectXMath.h>
 #include <list>
 #include "PEvent.h"
+#include <sstream>
 
 namespace PhysicsCanvas {
 	class Force : public PEvent {
@@ -54,6 +55,14 @@ namespace PhysicsCanvas {
 			return result;
 		}
 
+		void operator = (Force f1) {
+			SetId(f1.GetId());
+			type = f1.type;
+			SetStart(f1.GetStart());
+			SetEnd(f1.GetEnd());
+			direction = f1.GetDirection();
+		}
+
 		bool operator == (Force f1) {
 			if (type != f1.type) {
 				return false;
@@ -79,6 +88,15 @@ namespace PhysicsCanvas {
 			temp.y = direction.y / m;		//implementing a = F/m for acceleration
 			temp.z = direction.z / m;
 			return temp;
+		}
+
+		static void PrintForce(Force f) {
+			std::ostringstream oss;
+			oss << "Force name : " << f.GetId() << "\n"
+				<< "Direction = (" << f.GetDirection().x << ", " << f.GetDirection().y << ", " << f.GetDirection().z << ")\n"
+				<< "Start time = " << f.GetStart() << "\n"
+				<< "End time = " << f.GetEnd() << "\n";
+			OutputDebugString(oss.str().c_str());
 		}
 
 	private:
