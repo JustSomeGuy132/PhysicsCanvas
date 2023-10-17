@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "PhysicsCanvasMain.h"
 #include "Common\DirectXHelper.h"
-#include <conio.h>
+#include <sstream>
 
 using namespace PhysicsCanvas;
 using namespace Windows::Foundation;
@@ -15,10 +15,11 @@ PhysicsCanvas::PhysicsCanvasMain::PhysicsCanvasMain(const std::shared_ptr<DX::De
 	// Register to be notified if the Device is lost or recreated
 	m_deviceResources->RegisterDeviceNotify(this);
 
-	/*ImGui::CreateContext();
+	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());*/
-
+	io.DisplaySize = { m_deviceResources->GetOutputSize().Width, m_deviceResources->GetOutputSize().Height };
+	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());
+	
 	// TODO: Replace this with your app's content initialization.
 	m_sceneRenderer = std::unique_ptr<Sample3DSceneRenderer>(new Sample3DSceneRenderer(m_deviceResources));
 

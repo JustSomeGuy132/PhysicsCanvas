@@ -1,12 +1,13 @@
 #include "pch.h"
 #include "MoveLookControls.h"
 #include "..\Common\DirectXHelper.h"
-#include <iostream>
+#include <sstream>
 
 using namespace PhysicsCanvas;
 using namespace Windows::Foundation;
 
 namespace wnUIc = Windows::UI::Core;
+namespace wnIN = Windows::Devices::Input;
 
 void MoveLookControls::Initialize(wnUIc::CoreWindow^ window) {
 	window->KeyDown +=
@@ -74,9 +75,12 @@ void MoveLookControls::Update(wnUIc::CoreWindow^ window) {
 }
 
 void MoveLookControls::OnKeyDown(wnUIc::CoreWindow^ sender, wnUIc::KeyEventArgs^ args) {
-
 	Windows::System::VirtualKey key;
 	key = args->VirtualKey;
+	if (ImGui::GetIO().WantCaptureKeyboard) {
+		//ImGui::GetIO().AddKeyEvent(key, true);
+		return;
+	}
 	//handle the keypress
 	if (m_lookInUse) {
 		if (key == Windows::System::VirtualKey::W) {
@@ -132,6 +136,11 @@ void MoveLookControls::OnPointerPressed(wnUIc::CoreWindow^ sender, wnUIc::Pointe
 	uint32 pointerID = args->CurrentPoint->PointerId;
 	DirectX::XMFLOAT2 position = DirectX::XMFLOAT2(args->CurrentPoint->Position.X, args->CurrentPoint->Position.Y);
 
+	if (ImGui::GetIO().WantCaptureMouse) {
+		ImGui::GetIO().AddMouseButtonEvent(0, true);
+		return;
+	}
+
 	auto device = args->CurrentPoint->PointerDevice->PointerDeviceType;
 	if (device == Windows::Devices::Input::PointerDeviceType::Mouse) {
 		//handle mouse press
@@ -145,6 +154,8 @@ void MoveLookControls::OnPointerPressed(wnUIc::CoreWindow^ sender, wnUIc::Pointe
 void MoveLookControls::OnPointerMoved(wnUIc::CoreWindow^ sender, wnUIc::PointerEventArgs^ args) {
 	uint32 pointerID = args->CurrentPoint->PointerId;
 	DirectX::XMFLOAT2 position = DirectX::XMFLOAT2(args->CurrentPoint->Position.X, args->CurrentPoint->Position.Y);
+	ImGui::GetIO().AddMousePosEvent(position.x * 1.254901961f, position.y * 1.254901961f);
+
 	if (pointerID == m_lookPointerID) {
 		//looking around controls
 		DirectX::XMFLOAT2 pointerDelta;
@@ -167,9 +178,16 @@ void MoveLookControls::OnPointerMoved(wnUIc::CoreWindow^ sender, wnUIc::PointerE
 	}
 }
 
+
 void MoveLookControls::OnPointerReleased(wnUIc::CoreWindow^ sender, wnUIc::PointerEventArgs^ args) {
 	uint32 pointerID = args->CurrentPoint->PointerId;
 	DirectX::XMFLOAT2 position = DirectX::XMFLOAT2(args->CurrentPoint->Position.X, args->CurrentPoint->Position.Y);
+
+	if (ImGui::GetIO().WantCaptureMouse) {
+		ImGui::GetIO().AddMouseButtonEvent(0, false);
+		return;
+	}
+
 	//stop looking around
 	m_lookInUse = false;
 	m_lookPointerID = 0;

@@ -138,10 +138,6 @@ namespace PhysicsCanvas {
 			}
 			if(!flag)
 				AddForce(reactionF);
-
-			std::ostringstream oss;
-			oss << "Added a collision to " << GetName() << ", force(" << Rdir.x << ", " << Rdir.y << ", " << Rdir.z << ")\n";
-			OutputDebugString(oss.str().c_str());
 			
 			//find direction from this to coll
 			DirectX::XMFLOAT3 dir(position.x - coll->GetPosition().x,
@@ -167,9 +163,6 @@ namespace PhysicsCanvas {
 			}
 			if(!flag)
 				AddForce(f);
-			outstr << "Added force --" << fName << "-- to " << GetName()
-				<< " With direction = (" << -dir.x << ", " << -dir.y << ", " << -dir.z << ")" << "\n";
-			OutputDebugString(outstr.str().c_str());
 		}
 
 		void UpdateCollisionForces(float time) {
@@ -180,7 +173,7 @@ namespace PhysicsCanvas {
 						if (f.GetId() == std::get<1>(*coll) && f.GetEnd() == -0.5f) {	//if we find it, and it has not already been deactivated,
 							f.SetEnd(time);												//set that force to end at this time, deactivating it
 							coll = collisions.erase(coll);
-							OutputDebugString("REMOVED A COLLIDER");
+							//OutputDebugString("REMOVED A COLLIDER");
 							break;
 						}
 					}
@@ -217,23 +210,7 @@ namespace PhysicsCanvas {
 				(velocity.y * 0.001f) + (0.5f * a.y * 0.001f * 0.001f),
 				(velocity.z * 0.001f) + (0.5f * a.z * 0.001f * 0.001f)
 			);
-			std::ostringstream oss;
-			oss << "Velocity of " << GetName() << " = (" << velocity.x << ", " << velocity.y << ", " << velocity.z << ")\n"
-				<< "Where resultant force = (" << sumF.GetDirection().x << ", " << sumF.GetDirection().y << ", " << sumF.GetDirection().z << ")\n"
-				<< "Position = (" << position.x << ", " << position.y << ", " << position.z << ")\n";
-			OutputDebugString(oss.str().c_str());
-			std::list<Force> activeForces;
-			for (Force f : forces) {
-				if (time >= f.GetStart()) {
-					//if it's weight OR if it's a different type that is still meant to be applied
-					if (f.GetEnd() == -1 || f.GetEnd() == -0.5f || time < f.GetEnd()) {
-						activeForces.push_back(f);
-					}
-				}
-			}
-			for (Force foo : forces) {
-				Force::PrintForce(foo);
-			}
+			
 			ApplyTranslation(translation);
 		}
 		void RevStep(float time);

@@ -3,7 +3,6 @@
 
 #include "..\Common\DirectXHelper.h"
 #include <sstream>
-//#include "Wrappers.h"
 
 using namespace PhysicsCanvas;
 
@@ -15,7 +14,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	m_loadingComplete(false),
 	m_degreesPerSecond(45),
 	m_deviceResources(deviceResources),
-	u_Time(0), isStepping(true)
+	u_Time(0), isStepping(false)
 {
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
@@ -24,19 +23,16 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 // Initializes view parameters when the window size changes.
 void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 {
-	/*D3D11DeviceWrapper devWrap(m_deviceResources->GetD3DDevice());
-	D3D11DeviceContextWrapper contextWrap(m_deviceResources->GetD3DDeviceContext());
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGui_ImplDX11_Init(
-		&devWrap,
-		&contextWrap
-	);
-	ImGuiIO& io = ImGui::GetIO();*/
-
 	Size outputSize = m_deviceResources->GetOutputSize();
 	float aspectRatio = outputSize.Width / outputSize.Height;
 	float fovAngleY = 70.0f * XM_PI / 180.0f;
+
+	std::ostringstream size;
+	size << outputSize.Width << ", " << outputSize.Height << "\n";
+	OutputDebugString(size.str().c_str());
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize = { outputSize.Width, outputSize.Height };
 
 	// This is a simple example of change that can be made when the app is in
 	// portrait or snapped view.
@@ -65,6 +61,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 	controller->Initialize(wnd);
 	controller->SetPosition(DirectX::XMFLOAT3(0.0f, 1.2f, -2.1f));
 	controller->SetOrientation(-0.3f, 0.0f);
+
 }
 
 // Called once per frame
@@ -91,12 +88,9 @@ void Sample3DSceneRenderer::Step(DX::StepTimer const& timer) {
 		for (std::shared_ptr<PhysicsBody> body2 : pBodies) {
 			//make sure not to check collisions on the same object
 			if(i != j) {
-				std::ostringstream outstr;
-				outstr << "u_Time = " << u_Time << "s\n";
-				OutputDebugString(outstr.str().c_str());
 				//if body1 is colliding with body2
 				if (BoundingShape::IsColliding(body1->GetBounds(), body2->GetBounds())) {
-					OutputDebugString("COLLISION DETECTED!!");
+					
 					std::vector<XMFLOAT3> translations = BoundingShape::ResolveCollisions(body1->GetBounds(), body2->GetBounds());
 					body1->ApplyTranslation(translations[0]);
 					body2->ApplyTranslation(translations[1]);
@@ -124,10 +118,10 @@ void Sample3DSceneRenderer::STransform(float radians) {
 }
 
 
-// Renders a frame of all the models on screen [UI COMING SOON]
+// Renders a frame of all the models on screen
 void Sample3DSceneRenderer::Render() {
-	/*ImGui_ImplDX11_NewFrame();
-	ImGui::NewFrame();*/
+	ImGui_ImplDX11_NewFrame();
+	ImGui::NewFrame();
 
 	XMMATRIX viewMat = XMMatrixLookAtRH(
 		XMLoadFloat3(&controller->get_Position()), XMLoadFloat3(&controller->get_LookPoint()), up);
@@ -136,10 +130,22 @@ void Sample3DSceneRenderer::Render() {
 		body->Render(viewMat * projectionMat);
 	}
 
-	/*ImGui::ShowDemoWindow();
+	ImGui::ShowDemoWindow();
+	
+	ImGui::Begin("Components");
+	ImGui::End();
+
+	ImGui::Begin("Time manager");
+	if (ImGui::Button("Step")) {
+		isStepping = !isStepping;
+	}
+	std::ostringstream timeText;
+	timeText << "t = " << u_Time << "s";
+	ImGui::Text(timeText.str().c_str());
+	ImGui::End();
 
 	ImGui::Render();
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());*/
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
 void Sample3DSceneRenderer::CreateNewMesh(const UINT shape) {
@@ -153,6 +159,8 @@ void Sample3DSceneRenderer::CreateNewMesh(const UINT shape) {
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
+	
+	//create the floor of the world
 	PhysicsBody floor;
 	floor.Create(FLOOR, m_deviceResources);
 	floor.GiveName("FLOOR");
@@ -167,5 +175,6 @@ void Sample3DSceneRenderer::ReleaseDeviceDependentResources() {
 	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
 		body->ReleaseResources();
 	}
-	
+	ImGui::DestroyContext();
+	ImGui_ImplDX11_Shutdown();
 }
