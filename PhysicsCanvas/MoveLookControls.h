@@ -17,7 +17,6 @@ namespace PhysicsCanvas {
 			Windows::UI::Core::CoreWindow^ sender,
 			Windows::UI::Core::PointerEventArgs^ args
 		);
-
 		void OnPointerReleased(
 			Windows::UI::Core::CoreWindow^ sender,
 			Windows::UI::Core::PointerEventArgs^ args
@@ -27,7 +26,6 @@ namespace PhysicsCanvas {
 			Windows::UI::Core::CoreWindow^ sender,
 			Windows::UI::Core::KeyEventArgs^ args
 		);
-
 		void OnKeyUp(
 			Windows::UI::Core::CoreWindow^ sender,
 			Windows::UI::Core::KeyEventArgs^ args
@@ -65,5 +63,8 @@ namespace PhysicsCanvas {
 		bool m_forward, m_back;         // States for movement
 		bool m_left, m_right;
 		bool m_up, m_down;
+
+		bool right_pressed;
+		bool left_pressed;
 	};
 }

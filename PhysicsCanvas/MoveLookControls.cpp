@@ -21,6 +21,9 @@ void MoveLookControls::Initialize(wnUIc::CoreWindow^ window) {
 	window->PointerReleased +=
 		ref new TypedEventHandler<wnUIc::CoreWindow^, wnUIc::PointerEventArgs^>(this, &MoveLookControls::OnPointerReleased);
 
+	right_pressed = false;
+	left_pressed = false;
+
 	m_lookInUse = false;
 	m_lookPointerID = 0;
 
@@ -136,13 +139,15 @@ void MoveLookControls::OnPointerPressed(wnUIc::CoreWindow^ sender, wnUIc::Pointe
 	uint32 pointerID = args->CurrentPoint->PointerId;
 	DirectX::XMFLOAT2 position = DirectX::XMFLOAT2(args->CurrentPoint->Position.X, args->CurrentPoint->Position.Y);
 
+	right_pressed = args->CurrentPoint->Properties->IsRightButtonPressed;
+	left_pressed = args->CurrentPoint->Properties->IsLeftButtonPressed;
+
 	if (ImGui::GetIO().WantCaptureMouse) {
-		ImGui::GetIO().AddMouseButtonEvent(0, true);
-		return;
+		ImGui::GetIO().AddMouseButtonEvent(right_pressed, true);	//if right was pressed, it passes in true = 1 = code for RMB 
+		return;														//else pass in false = 0 = code for LMB, since only 1 can fire this event
 	}
 
-	auto device = args->CurrentPoint->PointerDevice->PointerDeviceType;
-	if (device == Windows::Devices::Input::PointerDeviceType::Mouse) {
+	if (right_pressed) {
 		//handle mouse press
 		m_lookInUse = true;
 		m_lookLastPoint = position;
@@ -183,14 +188,28 @@ void MoveLookControls::OnPointerReleased(wnUIc::CoreWindow^ sender, wnUIc::Point
 	uint32 pointerID = args->CurrentPoint->PointerId;
 	DirectX::XMFLOAT2 position = DirectX::XMFLOAT2(args->CurrentPoint->Position.X, args->CurrentPoint->Position.Y);
 
+	bool isRightButton = !args->CurrentPoint->Properties->IsRightButtonPressed && right_pressed;	//right was pressed but is no longer
+
+	bool isLeftButton = !args->CurrentPoint->Properties->IsLeftButtonPressed && left_pressed;
+
+	if (isRightButton)
+		right_pressed = false;
+
+	if (isLeftButton)
+		left_pressed = false;
+
 	if (ImGui::GetIO().WantCaptureMouse) {
-		ImGui::GetIO().AddMouseButtonEvent(0, false);
+		if (isRightButton)
+			ImGui::GetIO().AddMouseButtonEvent(1, false);
+		else if (isLeftButton)
+			ImGui::GetIO().AddMouseButtonEvent(0, false);
 		return;
 	}
-
-	//stop looking around
-	m_lookInUse = false;
-	m_lookPointerID = 0;
+	if(isRightButton) {
+		//stop looking around
+		m_lookInUse = false;
+		m_lookPointerID = 0;
+	}
 }
 
 void MoveLookControls::SetPosition(DirectX::XMFLOAT3 pos)

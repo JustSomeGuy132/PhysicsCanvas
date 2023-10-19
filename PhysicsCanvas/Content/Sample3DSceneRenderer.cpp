@@ -27,10 +27,6 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 	float aspectRatio = outputSize.Width / outputSize.Height;
 	float fovAngleY = 70.0f * XM_PI / 180.0f;
 
-	std::ostringstream size;
-	size << outputSize.Width << ", " << outputSize.Height << "\n";
-	OutputDebugString(size.str().c_str());
-
 	ImGuiIO& io = ImGui::GetIO();
 	io.DisplaySize = { outputSize.Width, outputSize.Height };
 
@@ -132,11 +128,11 @@ void Sample3DSceneRenderer::Render() {
 
 	ImGui::ShowDemoWindow();
 	
-	ImGui::Begin("Components");
+	ImGui::Begin("Add Objects");
 	ImGui::End();
 
 	ImGui::Begin("Time manager");
-	if (ImGui::Button("Step")) {
+	if (ImGui::Button(isStepping? "Pause" : "Resume")) {
 		isStepping = !isStepping;
 	}
 	std::ostringstream timeText;
