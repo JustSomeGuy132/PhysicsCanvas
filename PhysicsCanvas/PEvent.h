@@ -4,20 +4,38 @@
 namespace PhysicsCanvas {
 	class PEvent {
 	public:
-		PEvent() {}
+		PEvent() : toggle(true) {}
+		static enum eventType {
+			Force,
+		};
 
-		void SetStart(float start) { startT = start; }
-		void SetEnd(float end) { endT = end; }
+		virtual void SetStart(float start) { 
+			if (start >= 0) 
+				startT = start;
+			if (startT > endT)
+				endT = startT + 1.0f;
+		}
+		virtual void SetEnd(float end) { if (end > startT) endT = end; }
 
-		float GetStart() { return startT; }
-		float GetEnd() { return endT; }
+		virtual float GetStart() { return startT; }
+		virtual float GetEnd() { return endT; }
 
-		std::string GetId() const { return Id; }
-		void SetId(std::string id) { Id = id; }
+		virtual std::string GetId() const { return Id; }
+		virtual void SetId(std::string id) { Id = id; }
 
+		virtual bool GetToggle() { return toggle; }
+		virtual void SetToggle(bool newToggle) { toggle = newToggle; }
+
+		virtual void SetEventType(eventType new_type) {
+			eType = new_type;
+		}
+
+		virtual eventType GetEventType() { return eType; }
 	private:
+		eventType eType;
 		float startT = 0.0f;
 		float endT = 1.0f;
 		std::string Id;
+		bool toggle;
 	};
 }

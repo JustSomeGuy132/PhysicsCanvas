@@ -11,10 +11,12 @@ namespace PhysicsCanvas {
 		static enum ForceType {
 			Impulse,
 			Constant,
-			Weight	// weight is its own forcetype because it is infinitely applied
+			Weight,
+			Reaction
 		};
 		//for all regular forces that can be applied on objects
 		Force(ForceType type_, DirectX::XMFLOAT3 dir_) : type(type_), direction(dir_) {
+			SetEventType(eventType::Force);
 			if (type == ForceType::Impulse) {
 				SetEnd(0.002f);
 			}
@@ -22,13 +24,14 @@ namespace PhysicsCanvas {
 
 		//if only mass is passed in, that force is automatically assumed to be weight and will be classed as such
 		Force(float mass) : type(ForceType::Weight), direction(DirectX::XMFLOAT3(0.0f, mass * -9.81f, 0.0f)) {
-			SetEnd(-1.0f);
+			SetEventType(eventType::Force);
+			SetId("Weight");
 		}
 
 		void SetStart(float start) {
-			startT = start;
+			PEvent::SetStart(start);
 			if (type == ForceType::Impulse) {
-				SetEnd(startT + 0.002f);
+				SetEnd(GetStart() + 0.003f);
 			}
 		}
 
@@ -41,9 +44,21 @@ namespace PhysicsCanvas {
 			return result;
 		}
 
+		ForceType GetForceType() { return type; }
+		void SetForceType(ForceType newType) { 
+			type = newType;
+			if (newType == ForceType::Impulse) {
+				SetEnd(GetStart() + 0.003f);
+			}
+		}
+
 		DirectX::XMFLOAT3 GetDirection() {
 			return direction;
 		}
+		void SetDirection(DirectX::XMFLOAT3 dir) { direction = dir; }
+
+		DirectX::XMFLOAT3 GetFrom() { return fromPoint; }
+		void SetFrom(DirectX::XMFLOAT3 Point) { fromPoint = Point; }
 
 		static Force ResultantF(std::list<Force> forces) {
 			Force result(ForceType::Constant, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
@@ -90,19 +105,9 @@ namespace PhysicsCanvas {
 			return temp;
 		}
 
-		static void PrintForce(Force f) {
-			std::ostringstream oss;
-			oss << "Force name : " << f.GetId() << "\n"
-				<< "Direction = (" << f.GetDirection().x << ", " << f.GetDirection().y << ", " << f.GetDirection().z << ")\n"
-				<< "Start time = " << f.GetStart() << "\n"
-				<< "End time = " << f.GetEnd() << "\n";
-			OutputDebugString(oss.str().c_str());
-		}
-
 	private:
 		ForceType type;
 		DirectX::XMFLOAT3 direction;
-
-		float startT = 0.0f;
+		DirectX::XMFLOAT3 fromPoint;
 	};
 }

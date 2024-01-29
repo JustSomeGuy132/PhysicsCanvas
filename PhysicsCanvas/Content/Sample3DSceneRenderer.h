@@ -25,11 +25,14 @@ namespace PhysicsCanvas
 		void Update(DX::StepTimer const& timer);
 		void Render();
 		void CreateNewMesh(const UINT shape);
-		
+		void RaycastFromClick(float x, float y);
+		void ObjectManager();
+		void TimeManager();
+	
 		float u_Time;
+		float latest_Time;
 		void Step(DX::StepTimer const& timer);
-	private:
-		void STransform(float radians);
+	
 	private:
 		Windows::UI::Core::CoreWindow^ wnd;
 		MoveLookControls^ controller;
@@ -37,21 +40,16 @@ namespace PhysicsCanvas
 
 		DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 
-		bool isStepping;
+		bool is_stepping;
 	private:
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
 		// List of all meshes in the scene
 		std::list<std::shared_ptr<PhysicsBody>> pBodies;
+		std::shared_ptr<PhysicsBody> selectedBody = nullptr;
 
-		// Variables used with the rendering loop.
-		bool	m_loadingComplete;
-		float	m_degreesPerSecond;
-	private:
-		Microsoft::WRL::ComPtr<ID3D11Device> m_device;
-		Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_deviceContext;
-		Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
+		bool already_casting = false;
 
 	};
 }

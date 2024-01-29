@@ -318,6 +318,7 @@
     <ClInclude Include="BoundingShape.h" />
     <ClInclude Include="Common\DeviceResources.h" />
     <ClInclude Include="Force.h" />
+    <ClInclude Include="TimeKeeper.h" />
     <ClInclude Include="ImGUI\imconfig.h" />
     <ClInclude Include="ImGUI\imgui.h" />
     <ClInclude Include="ImGUI\imgui_impl_dx11.h" />
@@ -337,6 +338,7 @@
     <ClInclude Include="Content\SampleFpsTextRenderer.h" />
     <ClInclude Include="Content\ShaderStructures.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="PhysMaths.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SubMesh.h" />
   </ItemGroup>

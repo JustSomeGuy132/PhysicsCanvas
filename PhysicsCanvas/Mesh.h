@@ -16,7 +16,7 @@
 namespace PhysicsCanvas {
 	class Mesh {
 	public:
-		void Create(const UINT shape, const std::shared_ptr<DX::DeviceResources>& deviceResources);
+		void Create(const UINT _shape, const std::shared_ptr<DX::DeviceResources>& deviceResources, DirectX::XMFLOAT3 colour = DirectX::XMFLOAT3(0.1f, 0.6f, 0.1f));
 		void Render(DirectX::XMMATRIX viewprojMat);
 
 		void ReleaseResources() {
@@ -28,11 +28,18 @@ namespace PhysicsCanvas {
 			m_vertexBuffer.Reset();
 			m_indexBuffer.Reset();
 		}
-		void SetWorldMat(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 rotation);
+		void SetWorldMat(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 rotation, DirectX::XMFLOAT3 scale);
+		DirectX::XMMATRIX GetWorldMat() { return worldMat; }
+
 		void Scale(DirectX::XMFLOAT3 scale) {
 			worldMat = DirectX::XMMatrixScaling(scale.x, scale.y, scale.z) * worldMat;
 		}
 
+		DirectX::XMFLOAT3 GetColour() { return _colour; }
+
+		void SetVertexBuffer(DirectX::XMFLOAT3 colour);
+
+		void SetColour(DirectX::XMFLOAT3 col);
 
 		void LoadModel(const std::string& filepath) {
 			Assimp::Importer importer;
@@ -66,9 +73,9 @@ namespace PhysicsCanvas {
 				vert.pos.y = mesh->mVertices[i].y;
 				vert.pos.z = mesh->mVertices[i].z;
 
-				if (mesh->mTextureCoords[0]) {
-					vert.color = DirectX::XMFLOAT3(0.5f, 0.5f, 0.5f);
-				}
+				//if (mesh->mTextureCoords[0]) {
+				vert.color = DirectX::XMFLOAT3(0.5f, 0.5f, 0.5f);
+				//}
 				vertices.push_back(vert);
 			}
 			
@@ -87,6 +94,9 @@ namespace PhysicsCanvas {
 		uint32 m_indexCount;
 		bool m_loadingComplete;
 		DirectX::XMMATRIX worldMat = DirectX::XMMatrixIdentity();
+
+		UINT shape;
+		DirectX::XMFLOAT3 _colour;
 
 	private:
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;

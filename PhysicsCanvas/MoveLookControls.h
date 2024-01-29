@@ -4,8 +4,9 @@
 #include "..\Common\DeviceResources.h"
 #include "..\Common\StepTimer.h"
 #include "..\Common\DirectXHelper.h"
-#include "..\ImGUI\imgui.h"
-#include "..\ImGUI\imgui_impl_dx11.h" 
+#include "ImGUI\imgui.h"
+#include "ImGUI\imgui_impl_dx11.h"
+#include "ImGUI\imgui_impl_win32.h"
 
 namespace PhysicsCanvas {
 	ref class MoveLookControls {
@@ -35,6 +36,8 @@ namespace PhysicsCanvas {
 		void Initialize(Windows::UI::Core::CoreWindow^ window);
 
 		void Update(Windows::UI::Core::CoreWindow^ window);
+
+
 	internal:
 		// Accessor to set position of controller
 		void SetPosition(DirectX::XMFLOAT3 pos);
@@ -47,6 +50,10 @@ namespace PhysicsCanvas {
 
 		// Returns the point  which the controller is facing
 		DirectX::XMFLOAT3 get_LookPoint();
+
+		DirectX::XMFLOAT2 GetClick() { return clickCoords; }
+
+		ImGuiKey VK_To_ImGuiKey(Windows::System::VirtualKey key);
 	private:
 		// Properties of the controller object
 		DirectX::XMFLOAT3 m_position;               // The position of the controller
@@ -66,5 +73,7 @@ namespace PhysicsCanvas {
 
 		bool right_pressed;
 		bool left_pressed;
+
+		DirectX::XMFLOAT2 clickCoords = { -2, -2 };
 	};
 }
