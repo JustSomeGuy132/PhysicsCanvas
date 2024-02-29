@@ -16,6 +16,7 @@ PhysicsCanvas::PhysicsCanvasMain::PhysicsCanvasMain(const std::shared_ptr<DX::De
 	m_deviceResources->RegisterDeviceNotify(this);
 
 	ImGui::CreateContext();
+	ImPlot::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	io.DisplaySize = { m_deviceResources->GetOutputSize().Width, m_deviceResources->GetOutputSize().Height };
 	ImGui_ImplDX11_Init(m_deviceResources->GetD3DDevice(), m_deviceResources->GetD3DDeviceContext());

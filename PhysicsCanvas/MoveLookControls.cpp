@@ -20,6 +20,8 @@ void MoveLookControls::Initialize(wnUIc::CoreWindow^ window) {
 		ref new TypedEventHandler<wnUIc::CoreWindow^, wnUIc::PointerEventArgs^>(this, &MoveLookControls::OnPointerMoved);
 	window->PointerReleased +=
 		ref new TypedEventHandler<wnUIc::CoreWindow^, wnUIc::PointerEventArgs^>(this, &MoveLookControls::OnPointerReleased);
+	window->PointerWheelChanged +=
+		ref new TypedEventHandler<wnUIc::CoreWindow^, wnUIc::PointerEventArgs^>(this, &MoveLookControls::OnMouseWheel);
 
 	right_pressed = false;
 	left_pressed = false;
@@ -85,7 +87,12 @@ void MoveLookControls::OnKeyDown(wnUIc::CoreWindow^ sender, wnUIc::KeyEventArgs^
 		ImGui::GetIO().AddKeyEvent(imKey, true);
 		if (ImGui::GetIO().WantTextInput) {
 			wchar_t wch = 0;
-			::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)&key, 1, &wch, 1);
+			int k = (int)key;
+			::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)&k, 1, &wch, 1);
+			if (imKey == ImGuiKey_Minus)
+				wch = '-';
+			else if (imKey == ImGuiKey_Period)
+				wch = '.';
 			ImGui::GetIO().AddInputCharacter(wch);
 		}
 		return;
@@ -339,6 +346,13 @@ void MoveLookControls::OnPointerReleased(wnUIc::CoreWindow^ sender, wnUIc::Point
 			clickCoords = { -2, -2 };
 		}
 	}
+}
+
+void MoveLookControls::OnMouseWheel(wnUIc::CoreWindow^ sender, wnUIc::PointerEventArgs^ args) {
+	int wheelDelta = args->CurrentPoint->Properties->MouseWheelDelta;
+
+	ImGui::GetIO().AddMouseWheelEvent(0, wheelDelta);
+
 }
 
 void MoveLookControls::SetPosition(DirectX::XMFLOAT3 pos)

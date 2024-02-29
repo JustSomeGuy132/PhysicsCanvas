@@ -2,7 +2,6 @@
 #include "pch.h"
 #include "..\Common\DeviceResources.h"
 #include "..\Common\DirectXHelper.h"
-#include "..\Content\ShaderStructures.h"
 #include "Mesh.h"
 #include <list>
 #include "PEvent.h"
@@ -47,7 +46,7 @@ namespace PhysicsCanvas {
 				AddEvent(std::make_shared<Force>(weight));
 			}
 			else {
-				mass = 5970000000000000000000000.0f; // 5.97*10^24 kg
+				mass = 5.97e+24; // 5.97*10^24 kg
 			}
 		}
 
@@ -62,7 +61,47 @@ namespace PhysicsCanvas {
 		}
 		Mesh& GetMesh() { return _mesh; }
 
+		std::string BodyData() {
+			std::ostringstream data;
+			data << "OBJECT KINEMATIC\n"
+				<< "NAME " << name << "\n"
+				<< "COL " << _mesh.GetColour().x << " " << _mesh.GetColour().y << " " << _mesh.GetColour().z << "\n"
+				<< "SHAPE " << (bounds->GetType() == BoundingShape::Cuboid ? "Cuboid" : "Sphere") << "\n"
+				<< "DIMS " << (bounds->GetType() == BoundingShape::Cuboid ? std::to_string(dimensions.x) + " "
+					+ std::to_string(dimensions.y) + " "
+					+ std::to_string(dimensions.z)
+					: std::to_string(dimensions.x)) << "\n"
+				<< "POS " << timeKeeper.Retrieve(0).position.x << " " << timeKeeper.Retrieve(0).position.y << " " << timeKeeper.Retrieve(0).position.z << "\n"
+				<< "ROT " << timeKeeper.Retrieve(0).rotation.x << " " << timeKeeper.Retrieve(0).rotation.y << " " << timeKeeper.Retrieve(0).rotation.z << "\n"
+				<< "VEL " << timeKeeper.Retrieve(0).velocity.x << " " << timeKeeper.Retrieve(0).velocity.y << " " << timeKeeper.Retrieve(0).velocity.z << "\n"
+				<< "AVEL " << timeKeeper.Retrieve(0).ang_velocity.x << " " << timeKeeper.Retrieve(0).ang_velocity.y << " " << timeKeeper.Retrieve(0).ang_velocity.z << "\n"
+				<< "MASS " << mass << "\n";
+			for (std::shared_ptr<PEvent> e : pEvents) {
+				Force* eForce = dynamic_cast<Force*>(e.get());
+				if (eForce)
+					data << eForce->EData() << "\n";
+			}
+			data << "ENDOBJECT\n";
+			return data.str();
+		}
+
 		void SetTransform(DirectX::XMFLOAT3 pos, DirectX::XMFLOAT3 rot, DirectX::XMFLOAT3 scale) {
+			DirectX::XMFLOAT3 posChange(pos.x - position.x, pos.y - position.y, pos.z - position.z);
+			DirectX::XMFLOAT3 rotChange(rot.x - rotation.x, rot.y - rotation.y, rot.z - rotation.z);
+			//Update the fromPoint member on all forces
+			for (std::shared_ptr<PEvent> e : pEvents) {
+				Force* eForce = dynamic_cast<Force*>(e.get());
+				if (eForce) {
+					DirectX::XMFLOAT3 rotPosChange(PhysMaths::RotateVector(PhysMaths::Float3Minus(eForce->GetFrom(), position), rotChange));
+					eForce->SetFrom(PhysMaths::Float3Add(eForce->GetFrom(), PhysMaths::Float3Add(posChange, rotPosChange)));
+				}
+			}
+			for (Force& f : forces) {
+				DirectX::XMFLOAT3 rotPosChange(PhysMaths::RotateVector(PhysMaths::Float3Minus(f.GetFrom(), position), rotChange));
+				f.SetFrom(PhysMaths::Float3Add(f.GetFrom(), PhysMaths::Float3Add(posChange, rotPosChange)));
+			}
+			
+
 			position = pos;
 			rotation = rot;
 			dimensions = scale;
@@ -77,24 +116,13 @@ namespace PhysicsCanvas {
 			float _x = position.x + translation.x;
 			float _y = position.y + translation.y;
 			float _z = position.z + translation.z;
-
-			//Update the fromPoint member on all forces
-			for (std::shared_ptr<PEvent> e : pEvents) {
-				Force* eForce = dynamic_cast<Force*>(e.get());
-				if (eForce) {
-					eForce->SetFrom(DirectX::XMFLOAT3(eForce->GetFrom().x + translation.x, eForce->GetFrom().y + translation.y, eForce->GetFrom().z + translation.z));
-				}
-			}
-			for (Force& f : forces) {
-				f.SetFrom(DirectX::XMFLOAT3(f.GetFrom().x + translation.x, f.GetFrom().y + translation.y, f.GetFrom().z + translation.z));
-			}
-
 			SetTransform(DirectX::XMFLOAT3(_x, _y, _z), rotation, dimensions);
 		}
 		void ApplyRotation(DirectX::XMFLOAT3 rot) {
+			if (isFloor) return;
 			float _roll = rotation.x + rot.x;
-			float _pitch = rotation.y + rot.y;
-			float _yaw = rotation.z + rot.z;
+			float _pitch = rotation.z + rot.z;
+			float _yaw = rotation.y + rot.y;
 			SetTransform(position, DirectX::XMFLOAT3(_roll, _pitch, _yaw), dimensions);
 		}
 		void ApplyScale(DirectX::XMFLOAT3 scale_) {
@@ -110,7 +138,7 @@ namespace PhysicsCanvas {
 			for (std::shared_ptr<PEvent> e : pEvents) {
 				if (e->GetId() == "Weight") {
 					Force* eForce = dynamic_cast<Force*>(e.get());
-					if(eForce) {
+					if (eForce) {
 						eForce->SetDirection(DirectX::XMFLOAT3(0.0f, -9.81f * mass, 0.0f));
 						return;
 					}
@@ -122,10 +150,14 @@ namespace PhysicsCanvas {
 		DirectX::XMFLOAT3 GetRotation() { return rotation; }
 		DirectX::XMFLOAT3 GetDimensions() { return dimensions; }
 		DirectX::XMFLOAT3 GetVelocity() { return velocity; }
-
-		DirectX::XMFLOAT3 Momentum() {
-			return DirectX::XMFLOAT3(mass * velocity.x, mass * velocity.y, mass * velocity.z);
-		}
+		void SetVelocity(DirectX::XMFLOAT3 vel) { velocity = vel; }
+		DirectX::XMFLOAT3 GetAngularVelocity() { return ang_velocity; }
+		void SetAngVelocity(DirectX::XMFLOAT3 aVel) { ang_velocity = aVel; }
+		std::list<Force>& GetForces() { return forces; }
+		std::vector<std::shared_ptr<PEvent>> GetEvents() { return pEvents; }
+		std::shared_ptr<BoundingShape> GetBounds() { return bounds; }
+		TimeKeeper& GetTimeKeeper() { return timeKeeper; }
+		std::vector<std::tuple<float, std::string>>& GetTimestamps() { return timestamps; }
 
 		void AddForce(Force f) {	//if a whole force object is passed in
 			forces.push_back(f);
@@ -135,69 +167,57 @@ namespace PhysicsCanvas {
 			f.SetStart(time);
 			forces.push_back(f);
 		}
-		
+
 		void AddEvent(std::shared_ptr<PEvent> e) {
 			pEvents.push_back(e);
 		}
-		
+
 		bool HasCollider(std::string n) {
-			for (std::tuple<std::shared_ptr<PhysicsBody>, std::string> coll : collisions) {
-				if (std::get<0>(coll)->GetName() == n)
+			for (std::shared_ptr<PhysicsBody> coll : collisions) {
+				if (coll->GetName() == n)
 					return true;
 			}
 			return false;
 		}
 
 		void RegisterCollision(std::shared_ptr<PhysicsBody>& coll, float time) {
-			if (HasCollider(coll->GetName())) {
-				return;
-			} 
-			
-			//handle reaction forces for the objects having contact
+			//Handling reaction forces for the objects having contact
 			std::vector<DirectX::XMFLOAT3> contacts = bounds->ContactPointsTo(coll->GetBounds());
-			DirectX::XMFLOAT3 direction;
+			DirectX::XMFLOAT3 direction = {};
 			switch (coll->GetBounds()->GetType()) {
 			case BoundingShape::Sphere:
 				direction = { coll->position.x - position.x, coll->position.y - position.y, coll->position.z - position.z };
 				break;
 			case BoundingShape::Cuboid:
 				std::vector<CuboidFace> faces = coll->GetBounds()->CuboidFaces();
-				//if this object is to the right of coll
-				if (position.x > coll->GetBounds()->CuboidFaceCentre(faces[0]).x){
-					direction = coll->GetBounds()->CuboidFaceNormal(faces[0]);
-				}
-				//if this object is to the left of coll
-				else if (position.x < coll->GetBounds()->CuboidFaceCentre(faces[4]).x) {
-					direction = coll->GetBounds()->CuboidFaceNormal(faces[4]);
-				}
-				//if this object is in front of coll
-				else if (position.z > coll->GetBounds()->CuboidFaceCentre(faces[2]).z) {
-					direction = coll->GetBounds()->CuboidFaceNormal(faces[2]);
-				}
-				//if this object is behind coll
-				else if (position.z < coll->GetBounds()->CuboidFaceCentre(faces[3]).z) {
-					direction = coll->GetBounds()->CuboidFaceNormal(faces[3]);
-				}
-				//if this object is above coll
-				else if (position.y > coll->GetBounds()->CuboidFaceCentre(faces[1]).y) {
-					direction = coll->GetBounds()->CuboidFaceNormal(faces[1]);
-				}
-				//if this object is below coll
-				else if (position.y < coll->GetBounds()->CuboidFaceCentre(faces[5]).y) {
-					direction = coll->GetBounds()->CuboidFaceNormal(faces[5]);
+				//check this object's position relative to all of the faces
+				for (CuboidFace face : faces) {
+					if (PhysMaths::Float3Dot(coll->GetBounds()->CuboidFaceNormal(face),	PhysMaths::Float3Minus(position, BoundingShape::CuboidFaceCentre(face)))
+						/ (PhysMaths::Magnitude(coll->GetBounds()->CuboidFaceNormal(face)) * 
+							PhysMaths::Magnitude(DirectX::XMFLOAT3(PhysMaths::Float3Minus(position, BoundingShape::CuboidFaceCentre(face))))) >= 0){
+
+						direction = coll->GetBounds()->CuboidFaceNormal(face);
+						break;
+						}
 				}
 				break;
 			}
 			//store perpendicular distance of each contact point from the centre
 			std::vector<float> perpDists;
 			for (DirectX::XMFLOAT3 Cpoint : contacts) {
-				perpDists.push_back(PhysMaths::PerpendicularDist(DirectX::XMFLOAT3(Cpoint.x - position.x, Cpoint.y - position.y, Cpoint.z - position.z), direction));
+				perpDists.push_back(PhysMaths::PerpendicularDist(PhysMaths::Float3Minus(Cpoint, position), direction));
 			}
 			float l = 0; //sum of all perDists
 			for (float x : perpDists)
 				l += x;
 			//magnitude of reaction force, all the reactions will sum to this
-			float reactionMag = abs(PhysMaths::Float3Dot(Force::ResultantF(ActiveForces(time)).GetDirection(), direction) / PhysMaths::Magnitude(direction));
+			std::list<Force> allForcesExcludingReaction;
+			for (Force f : ActiveForces(time)) {
+				if (f.GetId().find(/*"Reaction force due to " + */coll->GetName()) == std::string::npos) {
+					allForcesExcludingReaction.push_back(f);
+				}
+			}
+			float reactionMag = abs(PhysMaths::Float3Dot(Force::ResultantF(allForcesExcludingReaction).GetDirection(), direction) / PhysMaths::Magnitude(direction));
 			//now to create a reaction force at each contact point, scaling it according to perpendicular distance proportions
 			int index = 0;
 			for (DirectX::XMFLOAT3 Cpoint : contacts) {
@@ -208,10 +228,12 @@ namespace PhysicsCanvas {
 				);
 				reaction.SetId(fName.str());
 				reaction.SetFrom(Cpoint);
+				reaction.SetColour(DirectX::XMFLOAT3(1, 0.1, 0.1));
 				bool flag0 = false;
-				for (Force f : forces) {
+				for (Force& f : forces) {
 					if (f.GetId() == reaction.GetId()) {
 						flag0 = true;
+						f = reaction;
 						break;
 					}
 				}
@@ -220,51 +242,63 @@ namespace PhysicsCanvas {
 				fName.flush();
 				index++;
 			}
-			//find direction from this to coll
-			DirectX::XMFLOAT3 dir(position.x - coll->GetPosition().x,
-					position.y - coll->GetPosition().y,
-					position.z - coll->GetPosition().z
-			);
-			dir = PhysMaths::VecDivByConstant(dir, PhysMaths::Magnitude(dir));
-			dir.x *= -Momentum().x / 0.003f;	//
-			dir.y *= -Momentum().y / 0.003f;	// F = p/t
-			dir.z *= -Momentum().z / 0.003f;	//
+			if (!HasCollider(coll->GetName())) {
+				collisions.push_back(coll);
+				timestamps.push_back(std::make_tuple(time, "Collision with " + coll->GetName()));
+				//find direction from this to coll
+				DirectX::XMFLOAT3 dir = direction;
+				dir = PhysMaths::VecDivByConstant(dir, pow(PhysMaths::Magnitude(dir), 2));
+				dir.x *= -Momentum().x / 0.003f;	//
+				dir.y *= -Momentum().y / 0.003f;	// F = p/t
+				dir.z *= -Momentum().z / 0.003f;	//
 
-			Force f(Force::Impulse, DirectX::XMFLOAT3(dir.x, dir.y, dir.z));
-			f.SetStart(time);
-			std::string fName = "Collision force due to " + coll->GetName();
-			f.SetId(fName);
-			std::ostringstream outstr;
-			bool flag = false;
-			for (Force& f0 : forces) {
-				if (f0.GetId() == fName) {
-					f0 = f;
-					flag = true;
-					break;
+				Force f(Force::Impulse, DirectX::XMFLOAT3(dir.x, dir.y, dir.z));
+				f.SetStart(time);
+				std::string fName = "Collision force due to " + coll->GetName();
+				f.SetId(fName);
+				f.SetFrom(position);
+				std::ostringstream outstr;
+				bool flag = false;
+				for (Force& f0 : forces) {
+					if (f0.GetId() == fName) {
+						flag = true;
+						f0 = f;
+						break;
+					}
 				}
+				if (!flag)
+					AddForce(f);
 			}
-			if (!flag)
-				AddForce(f);
+			
 		}
 
 		void UpdateCollisionForces(float time) {
-			for (std::vector<std::tuple<std::shared_ptr<PhysicsBody>, std::string>>::iterator coll = collisions.begin(); coll != collisions.end();) {
+			for (std::vector<std::shared_ptr<PhysicsBody>>::iterator coll = collisions.begin(); coll != collisions.end();) {
 				//if this body is no longer colliding with a body with which collisions were registered,
-				if (!BoundingShape::IsColliding(bounds, std::get<0>(*coll)->GetBounds())) {
-					for (Force& f : forces) {											//find the force which this collision caused
-						if (f.GetId().find(std::get<1>(*coll)) != std::string::npos 
-							&& f.GetForceType() == Force::Reaction) {	//if we find it, and it has not already been deactivated,
-							
-							f.SetForceType(Force::Constant);
-							f.SetEnd(time);												//set that force to end at this time, deactivating it
-							coll = collisions.erase(coll);
-							break;
+				for (Force& f : forces) {											//find the force which this collision caused
+					if (!BoundingShape::PointCollidingWithObject(f.GetFrom(), (*coll)->GetBounds())) {
+						if (f.GetId().find((*coll)->GetName()) != std::string::npos) {	//if we find it, and it has not already been deactivated,
+							f.SetToggle(false);
 						}
 					}
+				}
+				if (!BoundingShape::IsColliding(bounds, (*coll)->GetBounds())) {
+					coll = collisions.erase(coll);
 				}
 				else
 					++coll;		//move the iterator forward if we don't deregister the current collider
 			}
+		}
+
+		DirectX::XMFLOAT3 Torque(float time) {
+			DirectX::XMFLOAT3 resultant(0,0,0);
+			for (Force f : ActiveForces(time)) {
+				DirectX::XMFLOAT3 axis = PhysMaths::Float3Cross(
+					DirectX::XMFLOAT3(position.x - f.GetFrom().x, position.y - f.GetFrom().y, position.z - f.GetFrom().z), f.GetDirection());
+				
+				resultant = { resultant.x + axis.x, resultant.y + axis.y, resultant.z + axis.z };
+			}
+			return resultant;
 		}
 
 		std::list<Force> ActiveForces(float time) {
@@ -272,7 +306,7 @@ namespace PhysicsCanvas {
 			for (std::shared_ptr<PEvent> e : pEvents) {
 				if (e->GetEventType() == PEvent::Force && e->GetToggle()) {
 					Force* eForce = dynamic_cast<Force*>(e.get());
-					if(eForce) {
+					if (eForce) {
 						if (time >= eForce->GetStart()) {
 							if (eForce->GetForceType() == Force::Weight || time < eForce->GetEnd()) {
 								activeForces.push_back(*eForce);
@@ -284,17 +318,24 @@ namespace PhysicsCanvas {
 			for (Force f : forces) {
 				if (time >= f.GetStart()) {
 					//if if it's a reaction force OR if it's a different type that is still meant to be applied
-					if (f.GetForceType() == Force::Reaction || time < f.GetEnd()) {
-						activeForces.push_back(f);
+					if (f.GetForceType() == Force::Reaction) {
+						if (f.GetToggle())
+							activeForces.push_back(f);
+					}
+					else {
+						if (f.GetEnd() <= time)
+							activeForces.push_back(f);
 					}
 				}
 			}
 			return activeForces;
 		}
-		std::list<Force> GetForces() { return forces; }
-		std::vector<std::shared_ptr<PEvent>> GetEvents() { return pEvents; }
 
 		void Step(float time) {
+			if (timeKeeper.Retrieve(time) != NULL_RECORD) {
+				TimeJump(time);
+				return;
+			}
 			UpdateCollisionForces(time);
 			
 			Force sumF = Force::ResultantF(ActiveForces(time));
@@ -302,20 +343,49 @@ namespace PhysicsCanvas {
 			velocity.x = velocity.x + (a.x * 0.001f);	//each step increases time by 0.001s
 			velocity.y = velocity.y + (a.y * 0.001f);	//calculating u for next Step()
 			velocity.z = velocity.z + (a.z * 0.001f);	//v = u + at
-			//s = ut + at^2
+			//s = ut + 1/2 at^2
 			DirectX::XMFLOAT3 translation(
 				(velocity.x * 0.001f) + (0.5f * a.x * 0.001f * 0.001f),
 				(velocity.y * 0.001f) + (0.5f * a.y * 0.001f * 0.001f),
 				(velocity.z * 0.001f) + (0.5f * a.z * 0.001f * 0.001f)
 			);
-			
 			ApplyTranslation(translation);
+
+			DirectX::XMFLOAT3 ang_a = PhysMaths::VecDivByConstant(Torque(time), mass);
+			ang_velocity.x += ang_a.x * 0.001f;
+			ang_velocity.y += ang_a.y * 0.001f;
+			ang_velocity.z += ang_a.z * 0.001f;
+			//theta = omega(t) + 1/2 aplha(t)^2
+			DirectX::XMFLOAT3 rot(
+				(ang_velocity.x * 0.001f) + (0.5f * ang_a.x * 0.001f * 0.001f),
+				(ang_velocity.y * 0.001f) + (0.5f * ang_a.y * 0.001f * 0.001f),
+				(ang_velocity.z * 0.001f) + (0.5f * ang_a.z * 0.001f * 0.001f)
+			);
+			ApplyRotation(rot);
+
+			timeKeeper.RecordData(time, position, rotation, velocity, ang_velocity);
 		}
 
+		void TimeJump(float time) {
+			if (timeKeeper.Retrieve(time) == NULL_RECORD)
+				return;
 
-		std::shared_ptr<BoundingShape> GetBounds() { return bounds; }
+			Record& r = timeKeeper.Retrieve(time);
+			SetTransform(r.position, r.rotation, dimensions);
+			velocity = r.velocity;
+			ang_velocity = r.ang_velocity;
+			UpdateCollisionForces(time);
+		}
 
-		
+		DirectX::XMFLOAT3 Momentum() {
+			return DirectX::XMFLOAT3(mass * velocity.x, mass * velocity.y, mass * velocity.z);
+		}
+		float KineticEnergy() {
+			return (0.5f * mass * pow(PhysMaths::Magnitude(velocity), 2)) + (0.5f * mass * pow(PhysMaths::Magnitude(ang_velocity), 2));
+		}
+		float RelativeGPEnergy() {
+			return (mass * 9.81 * position.y);
+		}
 		
 		void ReleaseResources() {
 			_mesh.ReleaseResources();
@@ -328,19 +398,20 @@ namespace PhysicsCanvas {
 		DirectX::XMFLOAT3 rotation;
 		DirectX::XMFLOAT3 dimensions;
 
-		//for collisions, register the collision body as well as the name of the subsequent collision
-		std::vector<std::tuple<std::shared_ptr<PhysicsBody>, std::string>> collisions;
+		//for collisions, register the collision body ~~as well as the name of the subsequent collision~~
+		std::vector<std::shared_ptr<PhysicsBody>> collisions;
 
 		std::shared_ptr<BoundingShape> bounds;
 		bool isFloor = false;
 		std::list<Force> forces;
 		DirectX::XMFLOAT3 velocity;
+		DirectX::XMFLOAT3 ang_velocity;
 		float mass;
 		float volume;
 
 		std::vector<std::shared_ptr<PEvent>> pEvents;
 		TimeKeeper timeKeeper;
-		
+		std::vector<std::tuple<float, std::string>> timestamps;
 	};
 
 }

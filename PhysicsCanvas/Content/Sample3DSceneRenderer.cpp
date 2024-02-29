@@ -4,6 +4,12 @@
 #include "..\Common\DirectXHelper.h"
 #include <DirectXMath.h>
 #include <sstream>
+#include "../ArrowMesh.h"
+#include "../im-neo-sequencer-main/imgui_neo_sequencer.h"
+#include <fstream>
+#include <cstdlib>
+#include <windows.h>
+#include <coroutine>
 
 using namespace PhysicsCanvas;
 
@@ -13,8 +19,10 @@ using namespace Windows::Foundation;
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
 	m_deviceResources(deviceResources),
-	u_Time(0), latest_Time(0), is_stepping(false)
+	u_Time(0), latest_Time(0), is_stepping(false),
+	is_graphing(false)
 {
+
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
 }
@@ -59,6 +67,178 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 
 }
 
+void Sample3DSceneRenderer::SaveToFile() {
+	if (is_filing)
+		return;
+	is_filing = true;
+
+	std::stringstream data;
+	int i = 0;
+	for (std::shared_ptr<PhysicsBody> body : pBodies) {
+		if (i > 0)
+			data << body->BodyData() << "\n";
+		i++;
+	}
+
+	// FILE PICKER, FOR SELECTING A SAVE FILE
+	Windows::Storage::Pickers::FileOpenPicker^ filePicker = ref new Windows::Storage::Pickers::FileOpenPicker;
+
+	// ARRAY OF FILE TYPES
+	Platform::Array<Platform::String^>^ fileTypes = ref new Platform::Array<Platform::String^>(1);
+	fileTypes->Data[0] = ".psim";
+
+	filePicker->ViewMode = Windows::Storage::Pickers::PickerViewMode::Thumbnail;
+	filePicker->SuggestedStartLocation = Windows::Storage::Pickers::PickerLocationId::Desktop;
+	filePicker->FileTypeFilter->ReplaceAll(fileTypes);
+
+	// THIS SHOULD HOPEFULLY LET US PICK A FILE
+	auto fileChoose = filePicker->PickSingleFileAsync();
+	auto fileTask = concurrency::create_task(fileChoose);
+	std::string d = data.str();
+	fileTask.then([this, d](Windows::Storage::StorageFile^ saveFile) {
+		if (saveFile) {
+			std::wstring w_str = std::wstring(d.begin(), d.end());
+			const wchar_t* w_chars = w_str.c_str();
+			Platform::String^ text = ref new Platform::String(w_chars);
+			auto writeTask = concurrency::create_task(Windows::Storage::FileIO::WriteTextAsync(saveFile, text));
+			writeTask.then([&]() {
+				is_filing = false;
+				MessageBox(NULL, "Project successfully saved to file", "Project save successful", MB_ICONINFORMATION | MB_OK);
+			});
+		}
+		else {
+			MessageBox(NULL, "Data could not be saved to specified file, as the file could not be loaded.", "File loading error", MB_ICONWARNING | MB_OK);
+			is_filing = false;
+		}
+	});
+
+}
+
+void Sample3DSceneRenderer::LoadFromFile(std::string d) { //d represents data input
+	pBodies.clear();
+	CreateDeviceDependentResources();
+	std::istringstream dss(d);
+	OutputDebugString(dss.str().c_str());
+	//read file contents into a variable
+	std::vector<std::string> data;
+	while (dss) {
+		std::string line;
+		std::getline(dss, line);
+		data.push_back(line);
+	}
+	//process contents to load simulation
+	std::vector<PhysicsBody> bodies;
+	PhysicsBody b;
+	std::vector<std::shared_ptr<PEvent>> events;
+	std::shared_ptr<PEvent> e;
+	DirectX::XMFLOAT3 float3Buffer;
+	Force* eForce = dynamic_cast<Force*>(e.get());
+	for (std::string l : data) {
+		//split the string into a list
+		std::istringstream d(l);
+		std::vector<std::string> words;
+		std::string word;
+		while (std::getline(d, word, ' ')) {
+			words.push_back(word);
+		}
+		if (words.size() > 0) {
+			//to process the line, go through its words one by one
+			if (words[0] == "OBJECT") {
+				if (words[1] == "KINEMATIC") {/*No need to make changes if this is a kinematic body since its the default*/ }
+			}
+			else if (words[0] == "NAME") {
+				std::string name = "";
+				for (int i = 1; i < words.size(); i++) {
+					name += words[i] + " ";
+				}
+				name = name.substr(0, name.size() - 1); //get rid of extra space
+				b.GiveName(name);
+			}
+			else if (words[0] == "COL") {
+				float3Buffer = { std::stof(words[1].c_str()), std::stof(words[2].c_str()), std::stof(words[3].c_str()) };
+			}
+			else if (words[0] == "SHAPE") {
+				b.Create(words[1] == "Cuboid" ? CUBE : SPHERE, m_deviceResources);
+			}
+			else if (words[0] == "DIMS") {
+				switch (b.GetBounds()->GetType()) {
+				case BoundingShape::Cuboid:
+					b.ApplyScale(XMFLOAT3(std::stof(words[1].c_str()), std::stof(words[2].c_str()), std::stof(words[3].c_str())));
+					break;
+				case BoundingShape::Sphere:
+					b.ApplyScale(XMFLOAT3(std::stof(words[1].c_str()), std::stof(words[1].c_str()), std::stof(words[1].c_str())));
+					break;
+				}
+			}
+			else if (words[0] == "POS") {
+				b.ApplyTranslation(XMFLOAT3(std::stof(words[1].c_str()), std::stof(words[2].c_str()), std::stof(words[3].c_str())));
+			}
+			else if (words[0] == "ROT") {
+				b.ApplyRotation(XMFLOAT3(std::stof(words[1].c_str()), std::stof(words[2].c_str()), std::stof(words[3].c_str())));
+			}
+			else if (words[0] == "VEL") {
+				b.SetVelocity(XMFLOAT3(std::stof(words[1].c_str()), std::stof(words[2].c_str()), std::stof(words[3].c_str())));
+			}
+			else if (words[0] == "AVEL") {
+				b.SetAngVelocity(XMFLOAT3(std::stof(words[1].c_str()), std::stof(words[2].c_str()), std::stof(words[3].c_str())));
+			}
+			else if (words[0] == "MASS") {
+				b.SetMass(std::stof(words[1].c_str()));
+			}
+			//handle adding events from the file data
+			else if (words[0] == "EVENT") {
+				if (words[1] == "FORCE") {
+					e = std::make_shared<Force>(Force::Constant, XMFLOAT3());
+					eForce = dynamic_cast<Force*>(e.get());
+				}
+			}
+			else if (words[0] == "ID") {
+				std::string id = "";
+				for (int i = 1; i < words.size(); i++) {
+					id += words[i] + " ";
+				}
+				id = id.substr(0, id.size() - 1); //get rid of extra space
+				e->SetId(id);
+			}
+			else if (words[0] == "START") {
+				e->SetStart(std::stof(words[1].c_str()));
+			}
+			else if (words[0] == "FTYPE") {
+				if (eForce) {
+					if (words[1] == "Constant")
+						eForce->SetForceType(Force::Constant);
+					else if (words[1] == "Impulse")
+						eForce->SetForceType(Force::Impulse);
+				}
+			}
+			else if (words[0] == "END") {
+				e->SetEnd(std::stof(words[1].c_str()));
+			}
+			else if (words[0] == "DIR") {
+				if (eForce)
+					eForce->SetDirection(XMFLOAT3(std::stof(words[1].c_str()), std::stof(words[2].c_str()), std::stof(words[3].c_str())));
+			}
+			else if (words[0] == "FROM") {
+				if (eForce)
+					eForce->SetFrom(XMFLOAT3(std::stof(words[1].c_str()), std::stof(words[2].c_str()), std::stof(words[3].c_str())));
+			}
+			else if (words[0] == "ENDEVENT") {
+				events.push_back(e);
+				e = std::make_shared<PEvent>();
+			}
+			else if (words[0] == "ENDOBJECT") {
+				for (std::shared_ptr<PEvent> ev : events)
+					b.AddEvent(ev);
+				bodies.push_back(b);
+				b = PhysicsBody();
+			}
+		}
+	}
+	for (PhysicsBody bo : bodies) {
+		pBodies.push_back(std::make_shared<PhysicsBody>(bo));
+	}
+}
+
 // Called once per frame
 void Sample3DSceneRenderer::Update(DX::StepTimer const& timer) {
 
@@ -75,12 +255,14 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer) {
 	}
 
 	if (is_stepping) {
-		Step(timer);
+		Step();
 	}
 }
 
-void Sample3DSceneRenderer::Step(DX::StepTimer const& timer) {
-	
+void Sample3DSceneRenderer::Step() {
+	if (is_step) return;
+	is_step = true;
+
 	int i = 0;
 	for (std::shared_ptr<PhysicsBody> body1 : pBodies) {
 		int j = 0;
@@ -95,7 +277,7 @@ void Sample3DSceneRenderer::Step(DX::StepTimer const& timer) {
 					body2->ApplyTranslation(translations[1]);
 					
 					body1->RegisterCollision(body2, u_Time);
-					//body2->RegisterCollision(body1, u_Time);
+					body2->RegisterCollision(body1, u_Time);
 				}
 				else {
 					
@@ -109,29 +291,85 @@ void Sample3DSceneRenderer::Step(DX::StepTimer const& timer) {
 	if (u_Time >= latest_Time) {
 		latest_Time = u_Time;
 	}
-	//u_Time += timer.GetElapsedSeconds();
 	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
 		body->Step(u_Time);
 	}
+	is_step = false;
 }
 
 void Sample3DSceneRenderer::TimeManager() {
 	ImGui::Begin("Time manager");
+
 	if (ImGui::Button(is_stepping ? "Pause" : "Resume")) {
 		is_stepping = !is_stepping;
 	}
 	ImGui::SameLine();
 	ImGui::Text("Time ="); ImGui::SameLine();
 	float timeBuf = u_Time;
-	if (ImGui::InputFloat("s##Time", &timeBuf)) {
-
+	if (ImGui::InputFloat("s##Time", &timeBuf) && timeBuf >= 0) {
+		TimeJump(timeBuf);
 	}
 	ImGui::SameLine();
 	std::ostringstream timeText;
-	timeText << "; Latest time = " << u_Time << "s";
+	timeText << "; Latest time = " << latest_Time << "s";
 	ImGui::Text(timeText.str().c_str());
 	timeText.flush();
+	ImGui::SameLine();
+	if (ImGui::Button("Toggle grapher"))
+		is_graphing = !is_graphing;
+
+	int32_t currentFrame = u_Time * 1000;
+	int32_t startFrame = 0;
+	int32_t endFrame = latest_Time >= 1.0f? latest_Time * 1000 : 1000;
+	if (ImGui::BeginNeoSequencer("Sequencer", &currentFrame, &startFrame, &endFrame)) {
+		if (!is_stepping && pBodies.size() > 1) {
+			TimeJump(currentFrame / 1000.0f);
+		}
+		int i = 0;
+		for(std::shared_ptr<PhysicsBody> b : pBodies) {
+			if (i > 0) {
+				std::vector<ImGui::FrameIndexType> keyframes;
+				for (std::shared_ptr<PEvent> e : b->GetEvents()) {
+					keyframes.push_back(e->GetStart() * 1000);
+				}
+				for (std::tuple<float, std::string> stamp : b->GetTimestamps()) {
+					keyframes.push_back(std::get<0>(stamp) * 1000);
+				}
+				if (ImGui::BeginNeoTimeline(b->GetName().c_str(), keyframes)) {
+					ImGui::EndNeoTimeLine();
+				}
+			} i++;
+		}
+		ImGui::EndNeoSequencer();
+	}
+
 	ImGui::End();
+}
+
+void Sample3DSceneRenderer::TimeJump(float time) {
+	if (time <= latest_Time) {
+		u_Time = time;
+		for (std::shared_ptr<PhysicsBody> body : pBodies) {
+			body->TimeJump(u_Time);
+		}
+	}
+	else {
+		u_Time = latest_Time;
+		for (std::shared_ptr<PhysicsBody> b : pBodies)
+			b->TimeJump(u_Time);
+		while (u_Time < time) {
+			Step();
+		}
+	}
+}
+
+void Sample3DSceneRenderer::TimeWipe() {
+	u_Time = latest_Time = 0;
+	for (std::shared_ptr<PhysicsBody> b : pBodies) {
+		b->GetTimeKeeper().Wipe({0, b->GetPosition(), b->GetRotation(), XMFLOAT3(), XMFLOAT3()});
+		b->GetForces().clear();
+		b->GetTimestamps().clear();
+	}
 }
 
 void Sample3DSceneRenderer::ObjectManager() {
@@ -146,23 +384,28 @@ void Sample3DSceneRenderer::ObjectManager() {
 		selectedBody->GiveName(nameBuf);
 	}
 
-	const char* shapeOptions[] = { "Cuboid", "Sphere" };
-	int numOption = selectedBody->GetBounds()->GetType() == BoundingShape::Cuboid ? 0 : 1;
-	ImGui::Text("Shape: "); ImGui::SameLine();
-	ImGui::Combo("##ShapeSelect", &numOption, shapeOptions, 2);
-
 	static float col[3] = { selectedBody->GetMesh().GetColour().x, selectedBody->GetMesh().GetColour().y, selectedBody->GetMesh().GetColour().z };
 	ImGui::Text("Colour:");
 	if (ImGui::ColorEdit3("##ColourEditor", col) && !is_stepping) {
 		selectedBody->GetMesh().SetColour(XMFLOAT3(col[0], col[1], col[2]));
 	}
 
+	ImGui::TextDisabled("(!)Before editing these properties...(!)");
+	if (ImGui::BeginItemTooltip()) {
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+		ImGui::TextUnformatted("Editing the below properties will erase the simulation!\n"
+								"The time values will be reset to 0 with the current state being set to the initial state!\n"
+								"Please ensure your timeline is set to 0s before making edits here!");
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+
 	float massBuf = selectedBody->GetMass();
 	ImGui::Text("Mass:"); ImGui::SameLine();
 	if (ImGui::InputFloat("kg", &massBuf, 0, 0, "%e") && !is_stepping) {
 		selectedBody->SetMass(massBuf);
+		TimeWipe();
 	}
-
 
 	switch (selectedBody->GetBounds()->GetType()) {
 	case BoundingShape::Cuboid:
@@ -171,6 +414,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 			float dimBuf[3] = { selectedBody->GetDimensions().x, selectedBody->GetDimensions().y, selectedBody->GetDimensions().z };
 			if (ImGui::InputFloat3("m##DIMS", dimBuf) && !is_stepping) {
 				selectedBody->ApplyScale(XMFLOAT3(dimBuf[0], dimBuf[1], dimBuf[2]));
+				TimeWipe();
 			}
 		}
 		break;
@@ -180,6 +424,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 		float rBuf = selectedBody->GetDimensions().x;
 		if (ImGui::InputFloat("m##Radius", &rBuf) && !is_stepping) {
 			selectedBody->ApplyScale(XMFLOAT3(rBuf, rBuf, rBuf));
+			TimeWipe();
 		}
 	}
 	break;
@@ -189,25 +434,44 @@ void Sample3DSceneRenderer::ObjectManager() {
 	float posBuf[3] = { selectedBody->GetPosition().x, selectedBody->GetPosition().y, selectedBody->GetPosition().z };
 	if (ImGui::InputFloat3("m##Pos", posBuf) && !is_stepping) {
 		selectedBody->SetTransform(XMFLOAT3(posBuf[0], posBuf[1], posBuf[2]), selectedBody->GetRotation(), selectedBody->GetDimensions());
+		TimeWipe();
+	}
+
+	ImGui::Text("Rotation(roll, pitch, yaw):");
+	float rotBuf[3] = { selectedBody->GetRotation().x, selectedBody->GetRotation().z, selectedBody->GetRotation().y };
+	if (ImGui::InputFloat3("rad##Rot", rotBuf) && !is_stepping) {
+		selectedBody->SetTransform(selectedBody->GetPosition(), XMFLOAT3(rotBuf[0], rotBuf[2], rotBuf[1]), selectedBody->GetDimensions());
+		TimeWipe();
 	}
 
 	ImGui::Text("Velocity(x, y, z):");
-	float velBuf[3] = { selectedBody->GetVelocity().x, selectedBody->GetVelocity().y, selectedBody->GetVelocity().x };
-	if (ImGui::InputFloat3("m/s##VELOCITY", velBuf) && !is_stepping) {
+	std::ostringstream velText;
+	velText << selectedBody->GetVelocity().x << "m/s, " << selectedBody->GetVelocity().y << "m/s, " << selectedBody->GetVelocity().z << "m/s\n"
+		<< "  Magnitude: " << PhysMaths::Magnitude(selectedBody->GetVelocity()) << "m/s";
+	ImGui::Text(velText.str().c_str());
+	velText.flush();
 
-	}
+	ImGui::Text("Angular velocity(roll, pitch, yaw):");
+	std::ostringstream angVelText;
+	angVelText << selectedBody->GetAngularVelocity().x << "rad/s, " << selectedBody->GetAngularVelocity().z << "rad/s, " << selectedBody->GetAngularVelocity().y << "rad/s"
+		<< "\n  Magnitude: " << PhysMaths::Magnitude(selectedBody->GetAngularVelocity()) << "rad/s";
+	ImGui::Text(angVelText.str().c_str());
 
-	ImGui::Text("Resultant force(x, y, z):"); ImGui::SameLine();
+	ImGui::Text("Resultant force(x, y, z):");
 	XMFLOAT3 rForces = Force::ResultantF(selectedBody->ActiveForces(u_Time)).GetDirection();
 	std::ostringstream rfor;
-	rfor << rForces.x << "N, " << rForces.y << "N, " << rForces.z << "N";
+	rfor << rForces.x << "N, " << rForces.y << "N, " << rForces.z << "N\n"
+		<< "  Magnitude: " << PhysMaths::Magnitude(rForces) << "N";
 	ImGui::Text(rfor.str().c_str());
 	rfor.flush();
-	ImGui::Text("  Magnitude: "); ImGui::SameLine();
-	std::ostringstream rfor2;
-	rfor2 << Force::ResultantF(selectedBody->ActiveForces(u_Time)).Magnitude() << "N";
-	ImGui::Text(rfor2.str().c_str());
-	rfor2.flush();
+	
+	ImGui::Text("Torque(roll, pitch, yaw):");
+	XMFLOAT3 torq = selectedBody->Torque(u_Time);
+	std::ostringstream torText;
+	torText << torq.x << "Nm, " << torq.z << "Nm, " << torq.y << "Nm\n"
+		<< "  Magnitude: " << PhysMaths::Magnitude(torq) << "Nm";
+	ImGui::Text(torText.str().c_str());
+	torText.flush();
 
 	if (ImGui::CollapsingHeader("Pre-determined object events")) {
 		for (std::shared_ptr<PEvent> e : selectedBody->GetEvents()) {
@@ -222,6 +486,10 @@ void Sample3DSceneRenderer::ObjectManager() {
 						<< "   Magnitude: " << eForce->Magnitude() << "N";
 					ImGui::Text(oss.str().c_str());
 					oss.flush();
+					std::ostringstream oss2;
+					oss2 << "Acting from(x,y,z): " << eForce->GetFrom().x << "m, " << eForce->GetFrom().y << "m, " << eForce->GetFrom().z << "m";
+					ImGui::Text(oss2.str().c_str());
+					oss2.flush();
 				}
 				else {
 					ImGui::Text("Event name:"); ImGui::SameLine();
@@ -236,6 +504,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 					bool toggleBox = e->GetToggle();
 					if (ImGui::Checkbox("Toggle", &toggleBox) && !is_stepping) {
 						e->SetToggle(toggleBox);
+						TimeWipe();
 					}
 
 					const char* eventOptions[] = { "Force" };
@@ -246,6 +515,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 					float eventTimeNum = e->GetStart();
 					if (ImGui::InputFloat("s##EStartT", &eventTimeNum) && !is_stepping) {
 						e->SetStart(eventTimeNum);
+						TimeWipe();
 					}
 					//handle all other events
 					switch (e->GetEventType()) {
@@ -257,12 +527,14 @@ void Sample3DSceneRenderer::ObjectManager() {
 						int forceTypeNum = eForce->GetForceType() == Force::Constant ? 0 : 1;
 						if (ImGui::Combo("Force type", &forceTypeNum, ForceOptions, 2) && !is_stepping) {
 							eForce->SetForceType(forceTypeNum == 0 ? Force::Constant : Force::Impulse);
+							TimeWipe();
 						}
 						if (eForce->GetForceType() == Force::Constant) {
 							ImGui::Text("End time:"); ImGui::SameLine();
 							float eventEndNum = e->GetEnd();
 							if (ImGui::InputFloat("s##EEndT", &eventEndNum) && !is_stepping) {
 								e->SetEnd(eventEndNum);
+								TimeWipe();
 							}
 						}
 						ImGui::Text("Direction(x, y, z):");
@@ -270,10 +542,23 @@ void Sample3DSceneRenderer::ObjectManager() {
 						float eFBuf2 = eForce->Magnitude();
 						if (ImGui::InputFloat3("N##FORCEDIR", eFBuf) && !is_stepping) {
 							eForce->SetDirection(XMFLOAT3(eFBuf[0], eFBuf[1], eFBuf[2]));
+							TimeWipe();
+						}
+						float eFfromBuf[3] = { eForce->GetFrom().x, eForce->GetFrom().y, eForce->GetFrom().z };
+						if (ImGui::InputFloat3("m##ActingFromPoint", eFfromBuf) && !is_stepping
+							&& BoundingShape::PointCollidingWithObject(XMFLOAT3(eFfromBuf[0], eFfromBuf[1], eFfromBuf[2]), selectedBody->GetBounds())) {
+							eForce->SetFrom(XMFLOAT3(eFfromBuf[0], eFfromBuf[1], eFfromBuf[2]));
+							TimeWipe();
 						}
 						ImGui::Text("Magnitude:"); ImGui::SameLine();
 						if (ImGui::InputFloat("N##FORCEMAG", &eFBuf2) && !is_stepping) {
-
+							eForce->SetDirection(PhysMaths::VecTimesByConstant(eForce->GetDirection(), eFBuf2 / eForce->Magnitude()));
+							TimeWipe();
+						}
+						ImGui::Text("Arrow colour(RGB):");
+						float colBuf[3] = { eForce->GetColour().x, eForce->GetColour().y, eForce->GetColour().z };
+						if (ImGui::ColorEdit3("##ForceColour", colBuf)) {
+							eForce->SetColour(XMFLOAT3(colBuf[0], colBuf[1], colBuf[2]));
 						}
 					}
 					break;
@@ -284,8 +569,10 @@ void Sample3DSceneRenderer::ObjectManager() {
 		}
 		if (ImGui::Button("Add new event") && !is_stepping) {
 			Force newEvent = Force(Force::Constant, XMFLOAT3());
+			newEvent.SetFrom(selectedBody->GetPosition());
 			newEvent.SetId("New event");
 			selectedBody->AddEvent(std::make_shared<Force>(newEvent));
+			TimeWipe();
 		}
 	}
 	//handle events experienced in the specific instance in time
@@ -294,10 +581,15 @@ void Sample3DSceneRenderer::ObjectManager() {
 			if (ImGui::TreeNode(f.GetId().c_str())) {
 				ImGui::Text("Force name:"); ImGui::SameLine();
 				ImGui::Text(f.GetId().c_str());
+				XMFLOAT3 torq = PhysMaths::Float3Cross(
+					XMFLOAT3(selectedBody->GetPosition().x - f.GetFrom().x, 
+						selectedBody->GetPosition().y - f.GetFrom().y, selectedBody->GetPosition().z - f.GetFrom().z), f.GetDirection());
 
 				std::ostringstream forceTxt;
 				forceTxt << "Direction(x, y, z): " << f.GetDirection().x << "N, " << f.GetDirection().y << "N, " << f.GetDirection().z << "N\n"
-					<< "   Magnitude: " << f.Magnitude() << "N";
+					<< "   Magnitude: " << f.Magnitude() << "N\n"
+					<< "Acting from(x,y,z): " << f.GetFrom().x << "m, " << f.GetFrom().y << "m, " << f.GetFrom().z << "m\n"
+					<< "Resulting torque(roll, pitch, yaw): " << torq.x << "Nm, " << torq.z << "Nm, " << torq.y << "Nm";
 				ImGui::Text(forceTxt.str().c_str());
 				forceTxt.flush();
 
@@ -310,6 +602,89 @@ void Sample3DSceneRenderer::ObjectManager() {
 			ImGui::Text(f.GetId().c_str());
 		}
 	}
+	
+	ImGui::End();
+}
+
+void Sample3DSceneRenderer::GraphPlotter() {
+	ImGui::Begin("Graph plotter");
+
+	std::vector<float> timeVals;
+	timeVals.reserve(static_cast<size_t>((latest_Time / 0.001f) + 1));
+	for (float t = 0; t <= latest_Time; t += 0.001f)
+		timeVals.push_back(t);
+
+	std::vector<std::tuple<std::string, std::vector<float>>> yAxes;
+	int bI = 0;
+	for (std::shared_ptr<PhysicsBody> b : pBodies) {
+		if (bI > 0 && ImGui::TreeNode(b->GetName().c_str())) {
+			static bool displacement = false;
+			static bool speed = false;
+			static bool momentum = false;
+			static bool k_energy = false;
+			static bool gp_energy = false;
+
+			ImGui::Checkbox(("Plot displacement##" + b->GetName()).c_str(), &displacement);
+			ImGui::Checkbox(("Plot speed##" + b->GetName()).c_str(), &speed);
+			ImGui::Checkbox(("Plot momentum##" + b->GetName()).c_str(), &momentum);
+			ImGui::Checkbox(("Plot kinetic energy##" + b->GetName()).c_str(), &k_energy);
+			ImGui::Checkbox(("Plot relative gravitational potential energy##" + b->GetName()).c_str(), &gp_energy);
+
+			if (displacement) {
+				std::vector<float> dispY;
+				dispY.reserve(timeVals.size());
+				for (float t : timeVals) {
+					dispY.push_back(PhysMaths::Distance(b->GetTimeKeeper().Retrieve(0).position, b->GetTimeKeeper().Retrieve(t).position));
+				}
+				yAxes.push_back(std::make_tuple(("Displacement of " + b->GetName() + "(m)"), std::move(dispY)));
+			}
+			if (speed) {
+				std::vector<float> speedY;
+				speedY.reserve(timeVals.size());
+				for (float t : timeVals) {
+					speedY.push_back(PhysMaths::Magnitude(b->GetTimeKeeper().Retrieve(t).velocity));
+				}
+				yAxes.push_back(std::make_tuple(("Speed of " + b->GetName() + "(m/s)"), std::move(speedY)));
+			}
+			if (momentum) {
+				std::vector<float> momY;
+				momY.reserve(timeVals.size());
+				for (float t : timeVals) {
+					momY.push_back(PhysMaths::Magnitude(b->GetTimeKeeper().Retrieve(t).velocity) * b->GetMass());
+				}
+				yAxes.push_back(std::make_tuple(("Momentum of " + b->GetName() + "(kg m/s)"), std::move(momY)));
+			}
+			if (k_energy) {
+				std::vector<float> kinY;
+				kinY.reserve(timeVals.size());
+				for (float t : timeVals) {
+					kinY.push_back((0.5f * b->GetMass() * pow(PhysMaths::Magnitude(b->GetTimeKeeper().Retrieve(t).velocity), 2))
+									+ (0.5f * b->GetMass() * pow(PhysMaths::Magnitude(b->GetTimeKeeper().Retrieve(t).ang_velocity), 2)));
+				}
+				yAxes.push_back(std::make_tuple(("Kinetic energy of " + b->GetName() + "(J)"), std::move(kinY)));
+			}
+			if (gp_energy) {
+				std::vector<float> gravY;
+				gravY.reserve(timeVals.size());
+				for (float t : timeVals) {
+					gravY.push_back(b->GetMass() * 9.81f *  b->GetTimeKeeper().Retrieve(t).position.y);
+				}
+				yAxes.push_back(std::make_tuple(("Relative GPE of " + b->GetName() + "(J)"), std::move(gravY)));
+			}
+			ImGui::TreePop();
+		}
+		bI++;
+	}
+
+	if (ImPlot::BeginPlot("Graph 1")) {
+		ImPlot::SetupAxes("Time(s)", "Quantity(units)");
+		ImPlot::SetNextMarkerStyle(ImPlotMarker_None);
+		for (const auto& yVals : yAxes) {
+			ImPlot::PlotLine(std::get<0>(yVals).c_str(), timeVals.data(), std::get<1>(yVals).data(), timeVals.size());
+		}
+		ImPlot::EndPlot();
+	}
+
 	ImGui::End();
 }
 
@@ -324,37 +699,135 @@ void Sample3DSceneRenderer::Render() {
 	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
 		body->Render(viewMat * projectionMat);
 	}
-	ImGui::ShowDemoWindow();
+	//ImGui::ShowDemoWindow();
+	//ImPlot::ShowDemoWindow();
 	
-	ImGui::Begin("Add Objects");
-	if (ImGui::TreeNode("Kinematic body")) {
-		if (ImGui::Button("Cube")) {
-			CreateNewMesh(CUBE);
+	ImGui::SetNextWindowPos(ImVec2(12, 60));
+	ImGui::SetNextWindowSize(ImVec2(110, 50 * (pBodies.size() + 1) > 120? 120 : 50 * (pBodies.size() + 1)));
+	ImGui::Begin("All objects");
+	int i = 0;
+	for (std::shared_ptr<PhysicsBody> b : pBodies) {
+		if (i > 0) {
+			if (ImGui::Button(b->GetName() != "" ? b->GetName().c_str() : "##Empty label")) {
+				selectedBody = b;
+			}
 		}
-		if (ImGui::Button("Sphere")) {
-			CreateNewMesh(SPHERE);
-		}
-		ImGui::TreePop();
-	}
-	if (ImGui::TreeNode("Quantum body")) {
-		ImGui::TreePop();
+		i++;
 	}
 	ImGui::End();
 
+	ImGui::SetNextWindowPos(ImVec2(12, 185));
+	ImGui::Begin("Add Objects");
+	ImGui::Text("Kinematic body");
+	if (ImGui::Button("Cube")) {
+		CreateNewMesh(CUBE);
+	}
+	if (ImGui::Button("Sphere")) {
+		CreateNewMesh(SPHERE);
+	}
+	
+	ImGui::Text("Quantum body");
+	ImGui::Button("Coming soon!");
+	ImGui::End();
+
+
+
+	ImGui::SetNextWindowPos(ImVec2(12, m_deviceResources->GetOutputSize().Height * 0.68f));
+	ImGui::SetNextWindowSize(ImVec2(m_deviceResources->GetOutputSize().Width * 0.95f, m_deviceResources->GetOutputSize().Height * 0.275f));
 	TimeManager();
 
 	if (selectedBody != nullptr) {
 		ObjectManager();
+
+		for (Force& f : selectedBody->ActiveForces(u_Time)) {
+			ArrowMesh arr;
+			arr.Create(m_deviceResources, f.GetColour());
+			XMFLOAT3 rot(0,0,0);
+			rot.x = atanf(f.GetDirection().y / PhysMaths::Magnitude(XMFLOAT3(f.GetDirection().x, 0, f.GetDirection().z)));
+			rot.y = f.GetDirection().x == 0 && f.GetDirection().z == 0? 0
+				: acosf(PhysMaths::Float3Dot(XMFLOAT3(f.GetDirection().x, 0, f.GetDirection().z), XMFLOAT3(0,0,1))
+					/ PhysMaths::Magnitude(XMFLOAT3(f.GetDirection().x, 0, f.GetDirection().z)));
+			arr.SetWorldMat(f.GetFrom(), rot, 0.01f * f.Magnitude());
+			arr.Render(viewMat * projectionMat);
+			arr.ReleaseResources();
+		}
 	}
 
+	ImGui::Begin("Project options");
+	if (ImGui::Button("Save project") && !is_stepping)
+		SaveToFile();
+	if (ImGui::Button("Load from file") && !is_stepping) {
+		if (!is_filing) {
+			is_filing = true;
+
+			// FILE PICKER, FOR SELECTING A SAVE FILE
+			Windows::Storage::Pickers::FileOpenPicker^ filePicker = ref new Windows::Storage::Pickers::FileOpenPicker;
+
+			// ARRAY OF FILE TYPES
+			Platform::Array<Platform::String^>^ fileTypes = ref new Platform::Array<Platform::String^>(1);
+			fileTypes->Data[0] = ".psim";
+
+			filePicker->ViewMode = Windows::Storage::Pickers::PickerViewMode::Thumbnail;
+			filePicker->SuggestedStartLocation = Windows::Storage::Pickers::PickerLocationId::Desktop;
+			filePicker->FileTypeFilter->ReplaceAll(fileTypes);
+
+			// THIS SHOULD HOPEFULLY LET US PICK A FILE
+			auto fileChoose = filePicker->PickSingleFileAsync();
+			auto fileTask = concurrency::create_task(fileChoose);
+			fileTask.then([&](Windows::Storage::StorageFile^ saveFile) {
+				if (saveFile) {
+					auto writeTask = concurrency::create_task(Windows::Storage::FileIO::ReadTextAsync(saveFile));
+					writeTask.then([&](Platform::String^ str) {
+						std::wstring w_str(str->Begin());
+						std::string data(w_str.begin(), w_str.end());
+						LoadFromFile(data);
+						is_filing = false;
+						MessageBox(NULL, "Project successfully loaded from file", "Project load successful", MB_ICONINFORMATION | MB_OK);
+						});
+				}
+				else {
+					MessageBox(NULL, "Data could not be loaded from specified file, as the file could not be loaded.", "File loading error", MB_ICONWARNING | MB_OK);
+					is_filing = false;
+				}
+			});
+		}
+	}
+	ImGui::End();
+
+	if (is_graphing) {
+		GraphPlotter();
+	}
+	
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	
 }
 
 void Sample3DSceneRenderer::CreateNewMesh(const UINT shape) {
 	PhysicsBody nbody;
 	nbody.Create(shape, m_deviceResources);
-	nbody.GiveName("OBJ1");
+	std::string name;
+	switch (shape) {
+	case CUBE:
+		name = "CUBE";
+		break;
+	case SPHERE:
+		name = "SPHERE";
+		break;
+	}
+	bool nameExists = false;
+	for (std::shared_ptr<PhysicsBody> b : pBodies) {
+		if (name == b->GetName()) {
+			nameExists = true;
+			break;
+		}
+	}
+	if (!nameExists)
+		nbody.GiveName(name);
+	else {
+		name = name + std::to_string(rand() % 100);
+		nbody.GiveName(name);
+	}
 	//cast ray from centre of view to find appropriate position to place it
 	Size display = m_deviceResources->GetOutputSize();
 	XMMATRIX viewMat = XMMatrixLookAtRH(
@@ -384,10 +857,10 @@ void Sample3DSceneRenderer::CreateNewMesh(const UINT shape) {
 						newpos.y + translations[0].y - translations[1].y,
 						newpos.z + translations[0].z - translations[1].z };
 				nbody.SetTransform(newpos, nbody.GetRotation(), nbody.GetDimensions());
-				
 				std::shared_ptr<PhysicsBody> nbodyPointer = std::make_shared<PhysicsBody>(nbody);
 				selectedBody = nbodyPointer;
 				pBodies.push_back(nbodyPointer);
+				TimeWipe();
 				return;
 			}
 		}	
@@ -397,7 +870,7 @@ void Sample3DSceneRenderer::CreateNewMesh(const UINT shape) {
 		if(BoundingShape::IsColliding(nbody.GetBounds(), body->GetBounds())) {
 			std::vector<XMFLOAT3> translations = BoundingShape::ResolveCollisions(nbody.GetBounds(), body->GetBounds());
 			newpos = { newpos.x + translations[0].x - translations[1].x,
-					newpos.y + translations[0].y - translations[1].y,
+					abs(newpos.y + translations[0].y - translations[1].y),
 					newpos.z + translations[0].z - translations[1].z };
 			nbody.SetTransform(newpos, nbody.GetRotation(), nbody.GetDimensions());
 		}
@@ -405,6 +878,7 @@ void Sample3DSceneRenderer::CreateNewMesh(const UINT shape) {
 	std::shared_ptr<PhysicsBody> nbodyPointer = std::make_shared<PhysicsBody>(nbody);
 	selectedBody = nbodyPointer;
 	pBodies.push_back(nbodyPointer);
+	TimeWipe();
 }
 
 void Sample3DSceneRenderer::RaycastFromClick(float x, float y) {
@@ -458,13 +932,13 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	floor.Create(FLOOR, m_deviceResources);
 	floor.GiveName("FLOOR");
 	pBodies.push_front(std::make_shared<PhysicsBody>(floor));
-	//CreateNewMesh(CUBE);
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources() {
 	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
 		body->ReleaseResources();
 	}
+	ImPlot::DestroyContext();
 	ImGui::DestroyContext();
 	ImGui_ImplDX11_Shutdown();
 }

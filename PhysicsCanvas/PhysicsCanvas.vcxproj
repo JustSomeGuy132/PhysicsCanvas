@@ -315,9 +315,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
+    <ClInclude Include="ArrowMesh.h" />
     <ClInclude Include="BoundingShape.h" />
     <ClInclude Include="Common\DeviceResources.h" />
     <ClInclude Include="Force.h" />
+    <ClInclude Include="im-neo-sequencer-main\imgui_neo_internal.h" />
+    <ClInclude Include="im-neo-sequencer-main\imgui_neo_sequencer.h" />
+    <ClInclude Include="implot-master\implot.h" />
+    <ClInclude Include="implot-master\implot_internal.h" />
+    <ClInclude Include="ProjectLibrary.h" />
     <ClInclude Include="TimeKeeper.h" />
     <ClInclude Include="ImGUI\imconfig.h" />
     <ClInclude Include="ImGUI\imgui.h" />
@@ -345,6 +351,8 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Common\DeviceResources.cpp" />
+    <ClCompile Include="im-neo-sequencer-main\imgui_neo_internal.cpp" />
+    <ClCompile Include="im-neo-sequencer-main\imgui_neo_sequencer.cpp" />
     <ClCompile Include="ImGUI\imgui.cpp" />
     <ClCompile Include="ImGUI\imgui_demo.cpp" />
     <ClCompile Include="ImGUI\imgui_draw.cpp" />
@@ -352,6 +360,9 @@
     <ClCompile Include="ImGUI\imgui_impl_win32.cpp" />
     <ClCompile Include="ImGUI\imgui_tables.cpp" />
     <ClCompile Include="ImGUI\imgui_widgets.cpp" />
+    <ClCompile Include="implot-master\implot.cpp" />
+    <ClCompile Include="implot-master\implot_demo.cpp" />
+    <ClCompile Include="implot-master\implot_items.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MoveLookControls.cpp" />
     <ClCompile Include="PhysicsCanvasMain.cpp" />
@@ -367,6 +378,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ProjectLibrary.cpp" />
     <ClCompile Include="SubMesh.cpp" />
   </ItemGroup>
   <ItemGroup>

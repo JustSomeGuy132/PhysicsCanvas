@@ -115,6 +115,24 @@
     <ClCompile Include="ImGUI\imgui_widgets.cpp">
       <Filter>ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="im-neo-sequencer-main\imgui_neo_internal.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="im-neo-sequencer-main\imgui_neo_sequencer.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="implot-master\implot.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="implot-master\implot_demo.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="implot-master\implot_items.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="ProjectLibrary.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -176,6 +194,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TimeKeeper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="im-neo-sequencer-main\imgui_neo_sequencer.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="im-neo-sequencer-main\imgui_neo_internal.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ArrowMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="implot-master\implot.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="implot-master\implot_internal.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="ProjectLibrary.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

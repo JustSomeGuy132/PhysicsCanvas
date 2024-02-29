@@ -5,6 +5,7 @@
 #include "Content\Sample3DSceneRenderer.h"
 #include "Content\SampleFpsTextRenderer.h"
 #include "MoveLookControls.h"
+#include "implot-master/implot.h"
 #include <optional>
 #include <memory>
 #include <Windows.h>

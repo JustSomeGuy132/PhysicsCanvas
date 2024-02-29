@@ -31,6 +31,8 @@ namespace PhysicsCanvas {
 		}
 
 		virtual eventType GetEventType() { return eType; }
+
+		virtual std::string EData() { return "Empty event"; };
 	private:
 		eventType eType;
 		float startT = 0.0f;

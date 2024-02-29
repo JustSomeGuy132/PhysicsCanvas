@@ -11,6 +11,7 @@
 #include "..\ImGUI\imgui.h"
 #include "..\ImGUI\imgui_impl_win32.h"
 #include "..\ImGUI\imgui_impl_dx11.h"
+#include "..\implot-master\implot.h"
 
 namespace PhysicsCanvas
 {
@@ -22,16 +23,22 @@ namespace PhysicsCanvas
 		void CreateDeviceDependentResources();
 		void CreateWindowSizeDependentResources();
 		void ReleaseDeviceDependentResources();
+		void SaveToFile();
+		void LoadFromFile(std::string input);
 		void Update(DX::StepTimer const& timer);
 		void Render();
 		void CreateNewMesh(const UINT shape);
 		void RaycastFromClick(float x, float y);
 		void ObjectManager();
 		void TimeManager();
-	
+		void GraphPlotter();
+		void TimeWipe();
+		void TimeJump(float time);
+
 		float u_Time;
 		float latest_Time;
-		void Step(DX::StepTimer const& timer);
+		void Step();
+		void RevStep();
 	
 	private:
 		Windows::UI::Core::CoreWindow^ wnd;
@@ -41,6 +48,9 @@ namespace PhysicsCanvas
 		DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 
 		bool is_stepping;
+		bool is_revStepping;
+
+		bool is_graphing;
 	private:
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
@@ -50,6 +60,7 @@ namespace PhysicsCanvas
 		std::shared_ptr<PhysicsBody> selectedBody = nullptr;
 
 		bool already_casting = false;
-
+		bool is_step = false;
+		bool is_filing = false;
 	};
 }

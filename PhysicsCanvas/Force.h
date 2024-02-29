@@ -1,4 +1,5 @@
 #pragma once
+
 #include "..\Common\DirectXHelper.h"
 #include <DirectXMath.h>
 #include <list>
@@ -15,7 +16,8 @@ namespace PhysicsCanvas {
 			Reaction
 		};
 		//for all regular forces that can be applied on objects
-		Force(ForceType type_, DirectX::XMFLOAT3 dir_) : type(type_), direction(dir_) {
+		Force(ForceType type_, DirectX::XMFLOAT3 dir_)
+			: type(type_), direction(dir_), colour(1,0.1f,0.1f) {
 			SetEventType(eventType::Force);
 			if (type == ForceType::Impulse) {
 				SetEnd(0.002f);
@@ -23,7 +25,7 @@ namespace PhysicsCanvas {
 		}
 
 		//if only mass is passed in, that force is automatically assumed to be weight and will be classed as such
-		Force(float mass) : type(ForceType::Weight), direction(DirectX::XMFLOAT3(0.0f, mass * -9.81f, 0.0f)) {
+		Force(float mass) : type(ForceType::Weight), direction(DirectX::XMFLOAT3(0.0f, mass * -9.81f, 0.0f)), colour(0.1f,0.1f,1.0f) {
 			SetEventType(eventType::Force);
 			SetId("Weight");
 		}
@@ -34,6 +36,9 @@ namespace PhysicsCanvas {
 				SetEnd(GetStart() + 0.003f);
 			}
 		}
+
+		void SetColour(DirectX::XMFLOAT3 col) { colour = col; }
+		DirectX::XMFLOAT3 GetColour() { return colour; }
 
 		float Magnitude() {		//applies 3D Pythagoras to this force object
 			float result = 0.0f;
@@ -60,6 +65,22 @@ namespace PhysicsCanvas {
 		DirectX::XMFLOAT3 GetFrom() { return fromPoint; }
 		void SetFrom(DirectX::XMFLOAT3 Point) { fromPoint = Point; }
 
+		std::string EData() {
+			if (type == Weight)
+				return "";
+
+			std::ostringstream data;
+			data << "EVENT FORCE\n"
+				<< "ID " << GetId() << "\n"
+				<< "START " + std::to_string(GetStart()) << "\n"
+				<< "FTYPE " << (type == ForceType::Constant ? "Constant" : "Impulse") << "\n"
+				<< (type == ForceType::Constant ? "END " + std::to_string(GetEnd()) + "\n" : "")
+				<< "DIR " << direction.x << " " << direction.y << " " << direction.z << "\n"
+				<< "FROM " << fromPoint.x << " " << fromPoint.y << " " << fromPoint.z << "\n"
+				<< "ENDEVENT\n";
+			return data.str();
+		}
+
 		static Force ResultantF(std::list<Force> forces) {
 			Force result(ForceType::Constant, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
 			for (Force f : forces) {
@@ -76,6 +97,8 @@ namespace PhysicsCanvas {
 			SetStart(f1.GetStart());
 			SetEnd(f1.GetEnd());
 			direction = f1.GetDirection();
+			fromPoint = f1.GetFrom();
+			SetToggle(f1.GetToggle());
 		}
 
 		bool operator == (Force f1) {
@@ -109,5 +132,6 @@ namespace PhysicsCanvas {
 		ForceType type;
 		DirectX::XMFLOAT3 direction;
 		DirectX::XMFLOAT3 fromPoint;
+		DirectX::XMFLOAT3 colour;
 	};
 }

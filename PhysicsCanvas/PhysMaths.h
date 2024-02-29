@@ -18,7 +18,12 @@ namespace PhysicsCanvas {
 		static DirectX::XMFLOAT3 VecDivByConstant(DirectX::XMFLOAT3 vec, float c) {
 			return DirectX::XMFLOAT3(vec.x / c, vec.y / c, vec.z / c);
 		}
-
+		static DirectX::XMFLOAT3 Float3Add(DirectX::XMFLOAT3 vec1, DirectX::XMFLOAT3 vec2) {
+			return DirectX::XMFLOAT3(vec1.x + vec2.x, vec1.y + vec2.y, vec1.z + vec2.z);
+		}
+		static DirectX::XMFLOAT3 Float3Minus(DirectX::XMFLOAT3 vec1, DirectX::XMFLOAT3 vec2) {
+			return DirectX::XMFLOAT3(vec1.x - vec2.x, vec1.y - vec2.y, vec1.z - vec2.z);
+		}
 		static float Float3Dot(DirectX::XMFLOAT3 vec1, DirectX::XMFLOAT3 vec2) {
 			return (vec1.x * vec2.x) + (vec1.y * vec2.y) + (vec1.z * vec2.z);
 		}
@@ -27,6 +32,14 @@ namespace PhysicsCanvas {
 		}
 		static float PerpendicularDist(DirectX::XMFLOAT3 vec1, DirectX::XMFLOAT3 vec2) {
 			return abs(Magnitude(vec1) * sinf(acosf(Float3Dot(vec1, vec2) / (Magnitude(vec1) * Magnitude(vec2)))));
+		}
+		static DirectX::XMFLOAT3 RotateVector(DirectX::XMFLOAT3 vec, DirectX::XMFLOAT3 rot) {
+			DirectX::XMFLOAT3 ret = {};
+			DirectX::XMVECTOR vector = DirectX::XMLoadFloat3(&vec);
+			DirectX::XMVECTOR rotation = DirectX::XMQuaternionRotationRollPitchYaw(rot.z, rot.y, rot.x);
+			DirectX::XMVECTOR result = DirectX::XMVector3Rotate(vector, rotation);
+			DirectX::XMStoreFloat3(&ret, result);
+			return ret;
 		}
 	};
 }

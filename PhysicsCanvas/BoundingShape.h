@@ -29,15 +29,43 @@ namespace PhysicsCanvas {
 		void SetRotation(DirectX::XMFLOAT3 rot) { rotation = rot; }
 		void SetDimensions(DirectX::XMFLOAT3 dims) { dimensions = dims; }
 
+		DirectX::XMFLOAT3 GetMaxPoint() {
+			switch (type) {
+			case Cuboid:
+				DirectX::XMFLOAT3 maxP = {};
+				for (DirectX::XMFLOAT3 vert : CuboidVertices()) {
+					if (vert.x >= maxP.x && vert.y >= maxP.y && vert.z >= maxP.z)
+						maxP = vert;
+				}
+				return maxP;
+				break;
+			case Sphere:
+				return PhysMaths::Float3Add(position, PhysMaths::VecTimesByConstant({ 1,1,1 }, dimensions.x));
+				break;
+			}
+		}
+		DirectX::XMFLOAT3 GetMinPoint() {
+			switch (type) {
+			case Cuboid:
+				DirectX::XMFLOAT3 minP = {};
+				for (DirectX::XMFLOAT3 vert : CuboidVertices()) {
+					if (vert.x <= minP.x && vert.y <= minP.y && vert.z <= minP.z)
+						minP = vert;
+				}
+				return minP;
+				break;
+			case Sphere:
+				return PhysMaths::Float3Add(position, PhysMaths::VecTimesByConstant({ -1,-1,-1 }, dimensions.x));
+				break;
+			}
+		}
+
 		static bool PointCollidingWithObject(DirectX::XMFLOAT3 point, std::shared_ptr<BoundingShape> object) {
 			switch (object->type) {
 			case Cuboid:
-				DirectX::XMFLOAT3 half(object->dimensions.x / 2.f, object->dimensions.y / 2.f, object->dimensions.z / 2.f);
-				DirectX::XMFLOAT3 min1(object->position.x - half.x, object->position.y - half.y, object->position.z - half.z);
-				DirectX::XMFLOAT3 max1(object->position.x + half.x, object->position.y + half.y, object->position.z + half.z);
-				return (point.x >= min1.x && point.x <= max1.x) &&
-					(point.y >= min1.y && point.y <= max1.y) &&
-					(point.z >= min1.z && point.z <= max1.z);
+				return (point.x >= object->GetMinPoint().x && point.x <= object->GetMaxPoint().x
+						&& point.y >= object->GetMinPoint().y && point.y <= object->GetMaxPoint().y
+						&& point.z >= object->GetMinPoint().z && point.z <= object->GetMaxPoint().z);
 				break;
 			case Sphere:
 				return PhysMaths::Distance(point, object->position) <= object->dimensions.x;
@@ -49,29 +77,16 @@ namespace PhysicsCanvas {
 			if (first->type == BoundType::Cuboid) {
 				//cube-cube collisions
 				if (other->type == BoundType::Cuboid) {
-					DirectX::XMFLOAT3 half(first->dimensions.x / 2.f, first->dimensions.y / 2.f, first->dimensions.z / 2.f);
-					DirectX::XMFLOAT3 oHalf(other->dimensions.x / 2.f, other->dimensions.y / 2.f, other->dimensions.z / 2.f);
-
-					DirectX::XMFLOAT3 min1(first->position.x - half.x, first->position.y - half.y, first->position.z - half.z);
-
-					DirectX::XMFLOAT3 max1(first->position.x + half.x, first->position.y + half.y, first->position.z + half.z);
-
-					DirectX::XMFLOAT3 min2(other->position.x - oHalf.x, other->position.y - oHalf.y, other->position.z - oHalf.z);
-
-					DirectX::XMFLOAT3 max2(other->position.x + oHalf.x, other->position.y + oHalf.y, other->position.z + oHalf.z);
-
-					// Check for overlap along each axis (X, Y, Z)
-					bool overlapX = (max1.x >= min2.x) && (min1.x <= max2.x);
-					bool overlapY = (max1.y >= min2.y) && (min1.y <= max2.y);
-					bool overlapZ = (max1.z >= min2.z) && (min1.z <= max2.z);
-
+					for (DirectX::XMFLOAT3 v1 : first->CuboidVertices()) {
+						if (PointCollidingWithObject(v1, other))
+							return true;
+					}
+					for (DirectX::XMFLOAT3 v2 : other->CuboidVertices()) {
+						if (PointCollidingWithObject(v2, first))
+							return true;
+					}
 					//if there is a collision, return true. otherwise, return false
-					if (overlapX && overlapY && overlapZ) {
-						return true;
-					}
-					else {
-						return false;
-					}
+					return false;
 				}
 				//cube-sphere collisions
 				else {
@@ -105,21 +120,24 @@ namespace PhysicsCanvas {
 		}
 
 		static std::vector<DirectX::XMFLOAT3> ResolveCollisions(std::shared_ptr<BoundingShape> first, std::shared_ptr<BoundingShape> other) {
-			DirectX::XMFLOAT3 min1(first->position.x - first->dimensions.x * 0.5f,
-							first->position.y - first->dimensions.y * 0.5f,
-							first->position.z - first->dimensions.z * 0.5f);
+			DirectX::XMFLOAT3 half(first->dimensions.x / 2.f, first->dimensions.y / 2.f, first->dimensions.z / 2.f);
+			DirectX::XMFLOAT3 oHalf(other->dimensions.x / 2.f, other->dimensions.y / 2.f, other->dimensions.z / 2.f);
+
+			DirectX::XMFLOAT3 min1(-half.x, -half.y, -half.z);
 			
-			DirectX::XMFLOAT3 max1(first->position.x + first->dimensions.x * 0.5f,
-						first->position.y + first->dimensions.y * 0.5f,
-						first->position.z + first->dimensions.z * 0.5f);
+			min1 = PhysMaths::Float3Add(first->position, min1);min1 = PhysMaths::RotateVector(min1, first->rotation);
+
+			DirectX::XMFLOAT3 max1(half.x, half.y, half.z);
 			
-			DirectX::XMFLOAT3 min2(other->position.x - other->dimensions.x * 0.5f,
-						other->position.y - other->dimensions.y * 0.5f,
-						other->position.z - other->dimensions.z * 0.5f);
+			max1 = PhysMaths::Float3Add(first->position, max1);max1 = PhysMaths::RotateVector(max1, first->rotation);
+
+			DirectX::XMFLOAT3 min2(-oHalf.x, -oHalf.y, -oHalf.z);
 			
-			DirectX::XMFLOAT3 max2(other->position.x + other->dimensions.x * 0.5f,
-						other->position.y + other->dimensions.y * 0.5f,
-						other->position.z + other->dimensions.z * 0.5f);
+			min2 = PhysMaths::Float3Add(other->position, min2);min2 = PhysMaths::RotateVector(min2, other->rotation);
+
+			DirectX::XMFLOAT3 max2(oHalf.x, oHalf.y, oHalf.z);
+			
+			max2 = PhysMaths::Float3Add(other->position, max2);max2 = PhysMaths::RotateVector(max2, other->rotation);
 
 			float overlapX = min(max1.x, max2.x) - max(min1.x, min2.x);
 			float overlapY = min(max1.y, max2.y) - max(min1.y, min2.y);
@@ -153,59 +171,76 @@ namespace PhysicsCanvas {
 			return ret;
 		}
 
-		std::vector<Edge> CuboidEdges() {
+		std::vector<DirectX::XMFLOAT3> CuboidVertices() {
 			assert(type == BoundType::Cuboid && "Not a cuboid!!");
 			DirectX::XMFLOAT3 halves(dimensions.x / 2.0f, dimensions.y / 2.0f, dimensions.z / 2.0f);
-			std::vector<Edge> ret;
 			//declare positions of vertices
-			DirectX::XMFLOAT3 v1(position.x + halves.x, position.y + halves.y, position.z + halves.z);
-			DirectX::XMFLOAT3 v2(position.x + halves.x, position.y + halves.y, position.z - halves.z);
-			DirectX::XMFLOAT3 v3(position.x + halves.x, position.y - halves.y, position.z - halves.z);
-			DirectX::XMFLOAT3 v4(position.x + halves.x, position.y - halves.y, position.z + halves.z);
-			DirectX::XMFLOAT3 v5(position.x - halves.x, position.y + halves.y, position.z + halves.z);
-			DirectX::XMFLOAT3 v6(position.x - halves.x, position.y + halves.y, position.z - halves.z);
-			DirectX::XMFLOAT3 v7(position.x - halves.x, position.y - halves.y, position.z - halves.z);
-			DirectX::XMFLOAT3 v8(position.x - halves.x, position.y - halves.y, position.z + halves.z);
+			DirectX::XMFLOAT3 v1(halves.x, halves.y, halves.z);
+			v1 = PhysMaths::RotateVector(v1, rotation);
+			v1 = PhysMaths::Float3Add(v1, position);
+			DirectX::XMFLOAT3 v2(halves.x, halves.y, -halves.z);
+			v2 = PhysMaths::RotateVector(v2, rotation);
+			v2 = PhysMaths::Float3Add(v2, position);
+			DirectX::XMFLOAT3 v3(halves.x, -halves.y, -halves.z);
+			v3 = PhysMaths::RotateVector(v3, rotation);
+			v3 = PhysMaths::Float3Add(v3, position);
+			DirectX::XMFLOAT3 v4(halves.x, -halves.y, halves.z);
+			v4 = PhysMaths::RotateVector(v4, rotation);
+			v4 = PhysMaths::Float3Add(v4, position);
+			DirectX::XMFLOAT3 v5(-halves.x, halves.y, halves.z);
+			v5 = PhysMaths::RotateVector(v5, rotation);
+			v5 = PhysMaths::Float3Add(v5, position);
+			DirectX::XMFLOAT3 v6(-halves.x, halves.y, -halves.z);
+			v6 = PhysMaths::RotateVector(v6, rotation);
+			v6 = PhysMaths::Float3Add(v6, position);
+			DirectX::XMFLOAT3 v7(-halves.x, -halves.y, -halves.z);
+			v7 = PhysMaths::RotateVector(v7, rotation);
+			v7 = PhysMaths::Float3Add(v7, position);
+			DirectX::XMFLOAT3 v8(-halves.x, -halves.y, halves.z);
+			v8 = PhysMaths::RotateVector(v8, rotation);
+			v8 = PhysMaths::Float3Add(v8, position);
+			return { v1, v2, v3, v4, v5, v6, v7, v8 };
+		}
+
+		std::vector<Edge> CuboidEdges() {
+			assert(type == BoundType::Cuboid && "Not a cuboid!!");
+			
+			std::vector<Edge> ret;
+			std::vector<DirectX::XMFLOAT3> verts = CuboidVertices();
+			
 			//create edges
-			ret.push_back({ v1, v2 });
-			ret.push_back({ v1, v4 });
-			ret.push_back({ v2, v3 });
-			ret.push_back({ v3, v4 });
-			ret.push_back({ v1, v5 });
-			ret.push_back({ v2, v6 });
-			ret.push_back({ v3, v7 });
-			ret.push_back({ v4, v8 });
-			ret.push_back({ v5, v6 });
-			ret.push_back({ v5, v8 });
-			ret.push_back({ v6, v7 });
-			ret.push_back({ v7, v8 });
+			ret.push_back({ verts[0], verts[1] });
+			ret.push_back({ verts[1], verts[3] });
+			ret.push_back({ verts[1], verts[2] });
+			ret.push_back({ verts[2], verts[3] });
+			ret.push_back({ verts[0], verts[4] });
+			ret.push_back({ verts[1], verts[5] });
+			ret.push_back({ verts[2], verts[6] });
+			ret.push_back({ verts[3], verts[7] });
+			ret.push_back({ verts[4], verts[5] });
+			ret.push_back({ verts[4], verts[7] });
+			ret.push_back({ verts[5], verts[6] });
+			ret.push_back({ verts[6], verts[7] });
 			return ret;
 		}
 
 		std::vector<CuboidFace> CuboidFaces() {
 			assert(type == BoundType::Cuboid && "Not a cuboid!!");
-			DirectX::XMFLOAT3 halves(dimensions.x / 2.0f, dimensions.y / 2.0f, dimensions.z / 2.0f);
+			
 			std::vector<CuboidFace> ret;
-			//declare positions of vertices
-			DirectX::XMFLOAT3 v1(position.x + halves.x, position.y + halves.y, position.z + halves.z);
-			DirectX::XMFLOAT3 v2(position.x + halves.x, position.y + halves.y, position.z - halves.z);
-			DirectX::XMFLOAT3 v3(position.x + halves.x, position.y - halves.y, position.z - halves.z);
-			DirectX::XMFLOAT3 v4(position.x + halves.x, position.y - halves.y, position.z + halves.z);
-			DirectX::XMFLOAT3 v5(position.x - halves.x, position.y + halves.y, position.z + halves.z);
-			DirectX::XMFLOAT3 v6(position.x - halves.x, position.y + halves.y, position.z - halves.z);
-			DirectX::XMFLOAT3 v7(position.x - halves.x, position.y - halves.y, position.z - halves.z);
-			DirectX::XMFLOAT3 v8(position.x - halves.x, position.y - halves.y, position.z + halves.z);
+			std::vector<DirectX::XMFLOAT3> verts = CuboidVertices();
+			
 			//create faces
-			ret.push_back({ v1, v2, v3, v4 }); //right face
-			ret.push_back({ v1, v2, v6, v5 }); //top face
-			ret.push_back({ v1, v4, v8, v5 }); //front face
-			ret.push_back({ v2, v3, v7, v6 }); //back face
-			ret.push_back({ v5, v6, v7, v8 }); //left face
-			ret.push_back({ v3, v4, v8, v7 }); //bottom face
+			ret.push_back({ verts[0], verts[1], verts[2], verts[3] }); //right face
+			ret.push_back({ verts[0], verts[1], verts[5], verts[4] }); //top face
+			ret.push_back({ verts[0], verts[3], verts[7], verts[4] }); //front face
+			ret.push_back({ verts[1], verts[2], verts[6], verts[5] }); //back face
+			ret.push_back({ verts[4], verts[5], verts[6], verts[7] }); //left face
+			ret.push_back({ verts[2], verts[3], verts[7], verts[6]}); //bottom face
 			return ret;
 		}
-		DirectX::XMFLOAT3 CuboidFaceCentre(CuboidFace face) {
-			assert(type == BoundType::Cuboid && "Not a cuboid!");
+		static DirectX::XMFLOAT3 CuboidFaceCentre(CuboidFace face) {
+			
 			return DirectX::XMFLOAT3((face.vert1.x + face.vert2.x + face.vert3.x + face.vert4.x) / 4.0f,
 				(face.vert1.y + face.vert2.y + face.vert3.y + face.vert4.y) / 4.0f,
 				(face.vert1.z + face.vert2.z + face.vert3.z + face.vert4.z) / 4.0f);
@@ -218,15 +253,15 @@ namespace PhysicsCanvas {
 			DirectX::XMFLOAT3 vec2(face.vert4.x - face.vert1.x, face.vert4.y - face.vert1.y, face.vert4.z - face.vert1.z);
 
 			DirectX::XMFLOAT3 normal = PhysMaths::Float3Cross(vec1, vec2);
-			return (PhysMaths::Float3Dot(posToFac, normal) / PhysMaths::Magnitude(posToFac) * PhysMaths::Magnitude(normal)) > 0 ?
+			return (PhysMaths::Float3Dot(posToFac, normal) / (PhysMaths::Magnitude(posToFac) * PhysMaths::Magnitude(normal))) > 0 ?
 				normal : PhysMaths::VecTimesByConstant(normal, -1);
 		}
 
 		//To find the contact points on object1 with object2, call this method on object1 and pass in object2 as the argument
 		std::vector<DirectX::XMFLOAT3> ContactPointsTo(std::shared_ptr<BoundingShape> obj2) {
-			if(type == BoundType::Cuboid) {
+			std::vector<DirectX::XMFLOAT3> ret;
+			if (type == BoundType::Cuboid) {
 				std::vector<Edge> edges = CuboidEdges();
-				std::vector<DirectX::XMFLOAT3> ret;
 				for (Edge edge : edges) {
 					//If both vertices of the edge are colliding in contact with the object, they are both contact points
 					if (PointCollidingWithObject(edge.vert1, obj2) && PointCollidingWithObject(edge.vert2, obj2)) {
@@ -314,6 +349,17 @@ namespace PhysicsCanvas {
 							ret.push_back(point);
 					}
 				}
+				/*std::vector<DirectX::XMFLOAT3> otherPs;
+				for (DirectX::XMFLOAT3 oP : obj2->ContactPointsTo(std::make_shared<BoundingShape>(type, position, rotation, dimensions))) {
+					bool alreadyContained = false;
+					for (DirectX::XMFLOAT3 vert : ret) {
+						alreadyContained = (oP.x == vert.x) && (oP.y == vert.y) && (oP.z == vert.z);
+						if (alreadyContained)
+							break;
+					}
+					if (!alreadyContained)
+						ret.push_back(oP);
+				}*/
 				return ret;
 			}
 		}
