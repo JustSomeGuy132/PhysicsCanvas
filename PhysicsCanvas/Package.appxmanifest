@@ -4,10 +4,11 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Name="cc225b39-b06a-4580-aaa8-7f58dbea6f06"
+    Name="PhysicsCanvasSim"
     Publisher="CN=thepo"
     Version="1.0.0.0" />
 
@@ -15,7 +16,7 @@
 
   <Properties>
     <DisplayName>PhysicsCanvas</DisplayName>
-    <PublisherDisplayName>thepo</PublisherDisplayName>
+    <PublisherDisplayName>Adon Hossain</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -37,13 +38,13 @@
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="PhysicsCanvas"
         BackgroundColor="transparent">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
     </Application>
   </Applications>
 
   <Capabilities>
-    <Capability Name="internetClient" />
+    
   </Capabilities>
 </Package>

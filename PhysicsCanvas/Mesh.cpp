@@ -4049,9 +4049,9 @@ void Mesh::SetColour(XMFLOAT3 col) {
 }
 
 void Mesh::SetWorldMat(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 rotation, DirectX::XMFLOAT3 scale) {
-	worldMat = DirectX::XMMatrixScaling(scale.x, scale.y, scale.z) *
-		DirectX::XMMatrixRotationX(rotation.x) *
-		DirectX::XMMatrixRotationY(rotation.y) *
-		DirectX::XMMatrixRotationZ(rotation.z) *
-		DirectX::XMMatrixTranslation(position.x, position.y, position.z);
+	worldMat = XMMatrixScaling(scale.x, scale.y, scale.z) *
+		XMMatrixRotationQuaternion(
+            XMQuaternionRotationRollPitchYaw(rotation.z, rotation.y, rotation.x)
+        ) *
+		XMMatrixTranslation(position.x, position.y, position.z);
 }

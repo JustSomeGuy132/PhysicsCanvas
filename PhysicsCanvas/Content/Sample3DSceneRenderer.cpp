@@ -7,7 +7,6 @@
 #include "../ArrowMesh.h"
 #include "../im-neo-sequencer-main/imgui_neo_sequencer.h"
 #include <fstream>
-#include <cstdlib>
 #include <windows.h>
 #include <coroutine>
 
@@ -16,13 +15,12 @@ using namespace PhysicsCanvas;
 using namespace DirectX;
 using namespace Windows::Foundation;
 
-// Loads vertex and pixel shaders from files and instantiates the cube geometry.
 Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
 	m_deviceResources(deviceResources),
 	u_Time(0), latest_Time(0), is_stepping(false),
-	is_graphing(false)
+	is_graphing(false), data_obtained(false)
 {
-
+	library = std::unique_ptr<ProjectLib>(new ProjectLib(m_deviceResources));
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
 }
@@ -30,6 +28,13 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 // Initializes view parameters when the window size changes.
 void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 {
+	//Initialise input handlers
+	wnd = Windows::UI::Core::CoreWindow::GetForCurrentThread();
+	controller = ref new MoveLookControls();
+	controller->Initialize(wnd);
+
+	if (!data_obtained) return library->CreateWindowSizeDependentResources();
+
 	Size outputSize = m_deviceResources->GetOutputSize();
 	float aspectRatio = outputSize.Width / outputSize.Height;
 	float fovAngleY = 70.0f * XM_PI / 180.0f;
@@ -58,10 +63,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		1000.0f		//far z
 	);
 
-	//get access to window so as to pass into controller, initialise controller
-	wnd = Windows::UI::Core::CoreWindow::GetForCurrentThread();
-	controller = ref new MoveLookControls();
-	controller->Initialize(wnd);
+	//Initialise camera controller
 	controller->SetPosition(DirectX::XMFLOAT3(0.0f, 1.2f, -2.1f));
 	controller->SetOrientation(-0.3f, 0.0f);
 
@@ -79,46 +81,30 @@ void Sample3DSceneRenderer::SaveToFile() {
 			data << body->BodyData() << "\n";
 		i++;
 	}
-
-	// FILE PICKER, FOR SELECTING A SAVE FILE
-	Windows::Storage::Pickers::FileOpenPicker^ filePicker = ref new Windows::Storage::Pickers::FileOpenPicker;
-
-	// ARRAY OF FILE TYPES
-	Platform::Array<Platform::String^>^ fileTypes = ref new Platform::Array<Platform::String^>(1);
-	fileTypes->Data[0] = ".psim";
-
-	filePicker->ViewMode = Windows::Storage::Pickers::PickerViewMode::Thumbnail;
-	filePicker->SuggestedStartLocation = Windows::Storage::Pickers::PickerLocationId::Desktop;
-	filePicker->FileTypeFilter->ReplaceAll(fileTypes);
-
-	// THIS SHOULD HOPEFULLY LET US PICK A FILE
-	auto fileChoose = filePicker->PickSingleFileAsync();
-	auto fileTask = concurrency::create_task(fileChoose);
 	std::string d = data.str();
-	fileTask.then([this, d](Windows::Storage::StorageFile^ saveFile) {
+	Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
+	concurrency::create_task(localFolder->GetFileAsync(currentFile))
+	.then([this, d](Windows::Storage::StorageFile^ saveFile) {
 		if (saveFile) {
-			std::wstring w_str = std::wstring(d.begin(), d.end());
-			const wchar_t* w_chars = w_str.c_str();
-			Platform::String^ text = ref new Platform::String(w_chars);
+			std::wstring w_str(d.begin(), d.end());
+			Platform::String^ text = ref new Platform::String(w_str.c_str());
 			auto writeTask = concurrency::create_task(Windows::Storage::FileIO::WriteTextAsync(saveFile, text));
 			writeTask.then([&]() {
 				is_filing = false;
 				MessageBox(NULL, "Project successfully saved to file", "Project save successful", MB_ICONINFORMATION | MB_OK);
-			});
+				});
 		}
 		else {
 			MessageBox(NULL, "Data could not be saved to specified file, as the file could not be loaded.", "File loading error", MB_ICONWARNING | MB_OK);
 			is_filing = false;
 		}
 	});
-
 }
 
 void Sample3DSceneRenderer::LoadFromFile(std::string d) { //d represents data input
 	pBodies.clear();
 	CreateDeviceDependentResources();
 	std::istringstream dss(d);
-	OutputDebugString(dss.str().c_str());
 	//read file contents into a variable
 	std::vector<std::string> data;
 	while (dss) {
@@ -241,6 +227,11 @@ void Sample3DSceneRenderer::LoadFromFile(std::string d) { //d represents data in
 
 // Called once per frame
 void Sample3DSceneRenderer::Update(DX::StepTimer const& timer) {
+	if (!data_obtained) {
+		if (library->ChosenFile() != "")
+			return OnDataObtained();
+		return;
+	}
 
 	controller->Update(wnd);	//updates position and rotation of camera based on input
 
@@ -256,6 +247,42 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer) {
 
 	if (is_stepping) {
 		Step();
+	}
+}
+
+void Sample3DSceneRenderer::OnDataObtained() {
+	data_obtained = true;
+	CreateWindowSizeDependentResources();
+	CreateDeviceDependentResources();
+	currentFile = library->ChosenFile();
+	if (currentFile != "NONE") {
+		if (library->ChosenPreset() != "") {
+			//load preset data
+			Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
+			concurrency::create_task(localFolder->GetFileAsync(library->ChosenPreset()))
+			.then([&](Windows::Storage::StorageFile^ preset_file) {
+				concurrency::create_task(Windows::Storage::FileIO::ReadTextAsync(preset_file))
+				.then([&](Platform::String^ data) {
+					std::wstring w_data(data->Begin());
+					std::string s_data(w_data.begin(), w_data.end());
+					LoadFromFile(s_data);
+					SaveToFile();
+				});
+			});
+		}
+		else {
+			//load file data
+			Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
+			concurrency::create_task(localFolder->GetFileAsync(currentFile))
+			.then([&](Windows::Storage::StorageFile^ current_file) {
+				concurrency::create_task(Windows::Storage::FileIO::ReadTextAsync(current_file))
+				.then([&](Platform::String^ data) {
+					std::wstring w_data(data->Begin());
+					std::string s_data(w_data.begin(), w_data.end());
+					LoadFromFile(s_data);
+				});
+			});
+		}
 	}
 }
 
@@ -589,7 +616,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 				forceTxt << "Direction(x, y, z): " << f.GetDirection().x << "N, " << f.GetDirection().y << "N, " << f.GetDirection().z << "N\n"
 					<< "   Magnitude: " << f.Magnitude() << "N\n"
 					<< "Acting from(x,y,z): " << f.GetFrom().x << "m, " << f.GetFrom().y << "m, " << f.GetFrom().z << "m\n"
-					<< "Resulting torque(roll, pitch, yaw): " << torq.x << "Nm, " << torq.z << "Nm, " << torq.y << "Nm";
+					<< "Resulting torque(roll, pitch, yaw): \n" << torq.x << "Nm, " << torq.z << "Nm, " << torq.y << "Nm";
 				ImGui::Text(forceTxt.str().c_str());
 				forceTxt.flush();
 
@@ -690,6 +717,8 @@ void Sample3DSceneRenderer::GraphPlotter() {
 
 // Renders a frame of all the models (and all UI widgets) on screen
 void Sample3DSceneRenderer::Render() {
+	if (!data_obtained) return library->Render();
+
 	ImGui_ImplDX11_NewFrame();
 	ImGui::NewFrame();
 
@@ -699,8 +728,6 @@ void Sample3DSceneRenderer::Render() {
 	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
 		body->Render(viewMat * projectionMat);
 	}
-	//ImGui::ShowDemoWindow();
-	//ImPlot::ShowDemoWindow();
 	
 	ImGui::SetNextWindowPos(ImVec2(12, 60));
 	ImGui::SetNextWindowSize(ImVec2(110, 50 * (pBodies.size() + 1) > 120? 120 : 50 * (pBodies.size() + 1)));
@@ -725,12 +752,9 @@ void Sample3DSceneRenderer::Render() {
 	if (ImGui::Button("Sphere")) {
 		CreateNewMesh(SPHERE);
 	}
-	
 	ImGui::Text("Quantum body");
 	ImGui::Button("Coming soon!");
 	ImGui::End();
-
-
 
 	ImGui::SetNextWindowPos(ImVec2(12, m_deviceResources->GetOutputSize().Height * 0.68f));
 	ImGui::SetNextWindowSize(ImVec2(m_deviceResources->GetOutputSize().Width * 0.95f, m_deviceResources->GetOutputSize().Height * 0.275f));
@@ -754,44 +778,10 @@ void Sample3DSceneRenderer::Render() {
 	}
 
 	ImGui::Begin("Project options");
+	std::wstring w_current(currentFile->Begin());
+	ImGui::Text(std::string(w_current.begin(), w_current.end()).c_str());
 	if (ImGui::Button("Save project") && !is_stepping)
 		SaveToFile();
-	if (ImGui::Button("Load from file") && !is_stepping) {
-		if (!is_filing) {
-			is_filing = true;
-
-			// FILE PICKER, FOR SELECTING A SAVE FILE
-			Windows::Storage::Pickers::FileOpenPicker^ filePicker = ref new Windows::Storage::Pickers::FileOpenPicker;
-
-			// ARRAY OF FILE TYPES
-			Platform::Array<Platform::String^>^ fileTypes = ref new Platform::Array<Platform::String^>(1);
-			fileTypes->Data[0] = ".psim";
-
-			filePicker->ViewMode = Windows::Storage::Pickers::PickerViewMode::Thumbnail;
-			filePicker->SuggestedStartLocation = Windows::Storage::Pickers::PickerLocationId::Desktop;
-			filePicker->FileTypeFilter->ReplaceAll(fileTypes);
-
-			// THIS SHOULD HOPEFULLY LET US PICK A FILE
-			auto fileChoose = filePicker->PickSingleFileAsync();
-			auto fileTask = concurrency::create_task(fileChoose);
-			fileTask.then([&](Windows::Storage::StorageFile^ saveFile) {
-				if (saveFile) {
-					auto writeTask = concurrency::create_task(Windows::Storage::FileIO::ReadTextAsync(saveFile));
-					writeTask.then([&](Platform::String^ str) {
-						std::wstring w_str(str->Begin());
-						std::string data(w_str.begin(), w_str.end());
-						LoadFromFile(data);
-						is_filing = false;
-						MessageBox(NULL, "Project successfully loaded from file", "Project load successful", MB_ICONINFORMATION | MB_OK);
-						});
-				}
-				else {
-					MessageBox(NULL, "Data could not be loaded from specified file, as the file could not be loaded.", "File loading error", MB_ICONWARNING | MB_OK);
-					is_filing = false;
-				}
-			});
-		}
-	}
 	ImGui::End();
 
 	if (is_graphing) {
@@ -927,6 +917,8 @@ void Sample3DSceneRenderer::RaycastFromClick(float x, float y) {
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
+	if (!data_obtained) return library->CreateDeviceDependentResources();
+
 	//create the floor of the world
 	PhysicsBody floor;
 	floor.Create(FLOOR, m_deviceResources);

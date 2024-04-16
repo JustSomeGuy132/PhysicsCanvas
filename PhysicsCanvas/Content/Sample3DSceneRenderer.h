@@ -12,6 +12,7 @@
 #include "..\ImGUI\imgui_impl_win32.h"
 #include "..\ImGUI\imgui_impl_dx11.h"
 #include "..\implot-master\implot.h"
+#include ".\ProjectLibrary.h"
 
 namespace PhysicsCanvas
 {
@@ -62,5 +63,10 @@ namespace PhysicsCanvas
 		bool already_casting = false;
 		bool is_step = false;
 		bool is_filing = false;
+	private:
+		std::unique_ptr<ProjectLib> library;
+		bool data_obtained;
+		void OnDataObtained();
+		Platform::String^ currentFile;
 	};
 }

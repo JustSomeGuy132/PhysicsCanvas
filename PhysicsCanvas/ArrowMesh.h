@@ -2681,7 +2681,7 @@ namespace PhysicsCanvas {
             
             D3D11_DEPTH_STENCIL_DESC depthDesc = {};
             depthDesc.DepthEnable = false;
-            depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+            depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
             Microsoft::WRL::ComPtr<ID3D11DepthStencilState> DSState;
             m_deviceResources->GetD3DDevice()->CreateDepthStencilState(&depthDesc, &DSState);
             context->OMSetDepthStencilState(DSState.Get(), 1u);
@@ -2691,6 +2691,7 @@ namespace PhysicsCanvas {
 
             depthDesc.DepthEnable = true;
             depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+            depthDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
             m_deviceResources->GetD3DDevice()->CreateDepthStencilState(&depthDesc, &DSState);
             context->OMSetDepthStencilState(DSState.Get(), 1u);
 		}

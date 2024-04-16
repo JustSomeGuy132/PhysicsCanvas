@@ -10,14 +10,21 @@ namespace PhysicsCanvas {
 	class ProjectLib {
 	public:
 		ProjectLib(const std::shared_ptr<DX::DeviceResources>& deviceResources);
-		std::string LoopAndReturnFileData();
+		~ProjectLib() {};
+		void CreateWindowSizeDependentResources();
+		void CreateDeviceDependentResources();
+		Platform::String^ ChosenFile();
+		Platform::String^ ChosenPreset();
 		void Render();
-		Concurrency::task<Windows::Storage::StorageFile^> FilePicker();
+		void NewFileWindow();
+		void PresetSelectorWindow();
+
 	private:
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 		std::vector<std::string> existingProjectPaths;
 		std::string chosenPath;
+		std::string presetPath;
+		bool newproj_window = false, preset_window = false, projfile_window = false;
 
-		MoveLookControls^ input;
 	};
 }
