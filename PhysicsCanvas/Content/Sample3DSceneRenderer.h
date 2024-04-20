@@ -39,7 +39,6 @@ namespace PhysicsCanvas
 		float u_Time;
 		float latest_Time;
 		void Step();
-		void RevStep();
 	
 	private:
 		Windows::UI::Core::CoreWindow^ wnd;

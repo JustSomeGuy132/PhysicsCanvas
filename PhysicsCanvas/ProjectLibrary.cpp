@@ -45,6 +45,15 @@ Platform::String^ ProjectLib::ChosenPreset() {
 	return ref new Platform::String(wpreset.c_str());
 }
 
+void ProjectLib::Refresh() {
+	chosenPath = "";
+	presetPath = "";
+	existingProjectPaths.clear();
+	newproj_window = preset_window = false;
+	CreateWindowSizeDependentResources();
+	CreateDeviceDependentResources();
+}
+
 void ProjectLib::Render() {
 	ImGui_ImplDX11_NewFrame();
 	ImGui::NewFrame();

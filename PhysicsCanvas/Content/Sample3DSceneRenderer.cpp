@@ -74,6 +74,9 @@ void Sample3DSceneRenderer::SaveToFile() {
 		return;
 	is_filing = true;
 
+	float current_time = u_Time;
+	TimeJump(0);
+
 	std::stringstream data;
 	int i = 0;
 	for (std::shared_ptr<PhysicsBody> body : pBodies) {
@@ -83,22 +86,46 @@ void Sample3DSceneRenderer::SaveToFile() {
 	}
 	std::string d = data.str();
 	Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
-	concurrency::create_task(localFolder->GetFileAsync(currentFile))
-	.then([this, d](Windows::Storage::StorageFile^ saveFile) {
-		if (saveFile) {
-			std::wstring w_str(d.begin(), d.end());
-			Platform::String^ text = ref new Platform::String(w_str.c_str());
-			auto writeTask = concurrency::create_task(Windows::Storage::FileIO::WriteTextAsync(saveFile, text));
-			writeTask.then([&]() {
+	if (currentFile == "NONE") {
+		concurrency::create_task(localFolder->CreateFileAsync("Unnamed simulation.psim", Windows::Storage::CreationCollisionOption::GenerateUniqueName))
+		.then([this, d](Windows::Storage::StorageFile^ newFile) {
+			if (newFile) {
+				std::wstring Wfilename(newFile->Name->Begin());
+				std::string notice_text = "Your file has been saved under - " + std::string(Wfilename.begin(), Wfilename.end()) + 
+					" - you may rename it from your file explorer";
+				MessageBox(NULL, notice_text.c_str(), "Project file created", MB_ICONINFORMATION | MB_OK);
+				std::wstring w_str(d.begin(), d.end());
+				Platform::String^ text = ref new Platform::String(w_str.c_str());
+				auto writeTask = concurrency::create_task(Windows::Storage::FileIO::WriteTextAsync(newFile, text));
+				writeTask.then([&]() {
+					is_filing = false;
+					MessageBox(NULL, "Project successfully saved to file", "Project save successful", MB_ICONINFORMATION | MB_OK);
+					});
+			}
+			else {
+				MessageBox(NULL, "File could not be created", "File creation error", MB_ICONERROR | MB_OK);
+			}
+		});
+	}
+	else {
+		concurrency::create_task(localFolder->GetFileAsync(currentFile))
+		.then([this, d](Windows::Storage::StorageFile^ saveFile) {
+			if (saveFile) {
+				std::wstring w_str(d.begin(), d.end());
+				Platform::String^ text = ref new Platform::String(w_str.c_str());
+				auto writeTask = concurrency::create_task(Windows::Storage::FileIO::WriteTextAsync(saveFile, text));
+				writeTask.then([&]() {
+					is_filing = false;
+					MessageBox(NULL, "Project successfully saved to file", "Project save successful", MB_ICONINFORMATION | MB_OK);
+					});
+			}
+			else {
+				MessageBox(NULL, "Data could not be saved to specified file, as the file could not be loaded.", "File loading error", MB_ICONWARNING | MB_OK);
 				is_filing = false;
-				MessageBox(NULL, "Project successfully saved to file", "Project save successful", MB_ICONINFORMATION | MB_OK);
-				});
-		}
-		else {
-			MessageBox(NULL, "Data could not be saved to specified file, as the file could not be loaded.", "File loading error", MB_ICONWARNING | MB_OK);
-			is_filing = false;
-		}
-	});
+			}
+		});
+	}
+	TimeJump(current_time);
 }
 
 void Sample3DSceneRenderer::LoadFromFile(std::string d) { //d represents data input
@@ -411,12 +438,6 @@ void Sample3DSceneRenderer::ObjectManager() {
 		selectedBody->GiveName(nameBuf);
 	}
 
-	static float col[3] = { selectedBody->GetMesh().GetColour().x, selectedBody->GetMesh().GetColour().y, selectedBody->GetMesh().GetColour().z };
-	ImGui::Text("Colour:");
-	if (ImGui::ColorEdit3("##ColourEditor", col) && !is_stepping) {
-		selectedBody->GetMesh().SetColour(XMFLOAT3(col[0], col[1], col[2]));
-	}
-
 	ImGui::TextDisabled("(!)Before editing these properties...(!)");
 	if (ImGui::BeginItemTooltip()) {
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
@@ -466,7 +487,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 
 	ImGui::Text("Rotation(roll, pitch, yaw):");
 	float rotBuf[3] = { selectedBody->GetRotation().x, selectedBody->GetRotation().z, selectedBody->GetRotation().y };
-	if (ImGui::InputFloat3("rad##Rot", rotBuf) && !is_stepping) {
+	if (ImGui::DragFloat3("rad##Rot", rotBuf, 0.001f) && !is_stepping) {
 		selectedBody->SetTransform(selectedBody->GetPosition(), XMFLOAT3(rotBuf[0], rotBuf[2], rotBuf[1]), selectedBody->GetDimensions());
 		TimeWipe();
 	}
@@ -506,8 +527,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 				//handle object weight first, this is non-negotiable and a special case
 				if (e->GetId() == "Weight") {
 					ImGui::Text(e->GetId().c_str());
-					Force* eForce = dynamic_cast<Force*>(e.get()); //the weight will, no doubt, be of the Force type
-					if (!eForce) {} //do nothing if the pointer is invalid, although it should not be	
+					Force* eForce = dynamic_cast<Force*>(e.get()); //the weight will, no doubt, be of the Force type	
 					std::ostringstream oss;
 					oss << "Direction(x, y, z):" << eForce->GetDirection().x << "N, " << eForce->GetDirection().y << "N, " << eForce->GetDirection().z << "N\n"
 						<< "   Magnitude: " << eForce->Magnitude() << "N";
@@ -547,7 +567,6 @@ void Sample3DSceneRenderer::ObjectManager() {
 					//handle all other events
 					switch (e->GetEventType()) {
 					case PEvent::eventType::Force:
-					{
 						Force* eForce = dynamic_cast<Force*>(e.get());
 						if (!eForce) { break; }
 						const char* ForceOptions[] = { "Constant", "Impulse" };
@@ -571,24 +590,37 @@ void Sample3DSceneRenderer::ObjectManager() {
 							eForce->SetDirection(XMFLOAT3(eFBuf[0], eFBuf[1], eFBuf[2]));
 							TimeWipe();
 						}
-						float eFfromBuf[3] = { eForce->GetFrom().x, eForce->GetFrom().y, eForce->GetFrom().z };
-						if (ImGui::InputFloat3("m##ActingFromPoint", eFfromBuf) && !is_stepping
-							&& BoundingShape::PointCollidingWithObject(XMFLOAT3(eFfromBuf[0], eFfromBuf[1], eFfromBuf[2]), selectedBody->GetBounds())) {
-							eForce->SetFrom(XMFLOAT3(eFfromBuf[0], eFfromBuf[1], eFfromBuf[2]));
-							TimeWipe();
-						}
 						ImGui::Text("Magnitude:"); ImGui::SameLine();
 						if (ImGui::InputFloat("N##FORCEMAG", &eFBuf2) && !is_stepping) {
 							eForce->SetDirection(PhysMaths::VecTimesByConstant(eForce->GetDirection(), eFBuf2 / eForce->Magnitude()));
 							TimeWipe();
 						}
-						ImGui::Text("Arrow colour(RGB):");
-						float colBuf[3] = { eForce->GetColour().x, eForce->GetColour().y, eForce->GetColour().z };
-						if (ImGui::ColorEdit3("##ForceColour", colBuf)) {
-							eForce->SetColour(XMFLOAT3(colBuf[0], colBuf[1], colBuf[2]));
+						ImGui::Text("Acting from(x, y, z):");
+						static float eFfromBuf0 = eForce->GetFrom().x, eFfromBuf1 = eForce->GetFrom().y, eFfromBuf2 = eForce->GetFrom().z;
+
+						if (ImGui::DragFloat("m##ActingFromX", &eFfromBuf0, 0.001f, 
+							selectedBody->GetBounds()->GetMinPoint().x, selectedBody->GetBounds()->GetMaxPoint().x) && !is_stepping
+							&& BoundingShape::PointCollidingWithObject(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2), selectedBody->GetBounds())
+							) {
+							eForce->SetFrom(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2));
+							TimeWipe();
 						}
-					}
-					break;
+						if (ImGui::DragFloat("m##ActingFromY", &eFfromBuf1, 0.001f, 
+							selectedBody->GetBounds()->GetMinPoint().y, selectedBody->GetBounds()->GetMaxPoint().y) && !is_stepping
+							&& BoundingShape::PointCollidingWithObject(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2), selectedBody->GetBounds())
+							) {
+							eForce->SetFrom(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2));
+							TimeWipe();
+						}
+						if (ImGui::DragFloat("m##ActingFromZ", &eFfromBuf2, 0.001f, 
+							selectedBody->GetBounds()->GetMinPoint().z, selectedBody->GetBounds()->GetMaxPoint().z) && !is_stepping
+							&& BoundingShape::PointCollidingWithObject(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2), selectedBody->GetBounds())
+							) {
+							eForce->SetFrom(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2));
+							TimeWipe();
+						}
+					
+						break;
 					}
 				}
 				ImGui::TreePop();
@@ -722,6 +754,39 @@ void Sample3DSceneRenderer::Render() {
 	ImGui_ImplDX11_NewFrame();
 	ImGui::NewFrame();
 
+	if (ImGui::BeginMainMenuBar()) {
+		if (ImGui::BeginMenu("PhysicsCanvas")) {
+			if (ImGui::MenuItem("Return to library")) {
+				data_obtained = false;
+				library->Refresh();
+			}
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("File")) {
+			std::wstring w_current(currentFile->Begin());
+			ImGui::Text("Current project:");
+			ImGui::Text(std::string(w_current.begin(), w_current.end()).c_str());
+			if (ImGui::MenuItem("Save to file"))
+				SaveToFile();
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Edit")) {
+			if (ImGui::BeginMenu("Add kinematic body")) {
+				if (ImGui::MenuItem("Cube"))
+					CreateNewMesh(CUBE);
+				if (ImGui::MenuItem("Sphere"))
+					CreateNewMesh(SPHERE);
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Add quantum body")) {
+				ImGui::Text("Coming soon!");
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
+
 	XMMATRIX viewMat = XMMatrixLookAtRH(
 		XMLoadFloat3(&controller->get_Position()), XMLoadFloat3(&controller->get_LookPoint()), up);
 
@@ -741,19 +806,6 @@ void Sample3DSceneRenderer::Render() {
 		}
 		i++;
 	}
-	ImGui::End();
-
-	ImGui::SetNextWindowPos(ImVec2(12, 185));
-	ImGui::Begin("Add Objects");
-	ImGui::Text("Kinematic body");
-	if (ImGui::Button("Cube")) {
-		CreateNewMesh(CUBE);
-	}
-	if (ImGui::Button("Sphere")) {
-		CreateNewMesh(SPHERE);
-	}
-	ImGui::Text("Quantum body");
-	ImGui::Button("Coming soon!");
 	ImGui::End();
 
 	ImGui::SetNextWindowPos(ImVec2(12, m_deviceResources->GetOutputSize().Height * 0.68f));
@@ -776,13 +828,6 @@ void Sample3DSceneRenderer::Render() {
 			arr.ReleaseResources();
 		}
 	}
-
-	ImGui::Begin("Project options");
-	std::wstring w_current(currentFile->Begin());
-	ImGui::Text(std::string(w_current.begin(), w_current.end()).c_str());
-	if (ImGui::Button("Save project") && !is_stepping)
-		SaveToFile();
-	ImGui::End();
 
 	if (is_graphing) {
 		GraphPlotter();

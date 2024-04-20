@@ -20,7 +20,7 @@ namespace PhysicsCanvas {
 			: type(type_), direction(dir_), colour(1,0.1f,0.1f) {
 			SetEventType(eventType::Force);
 			if (type == ForceType::Impulse) {
-				SetEnd(0.002f);
+				SetEnd(0.003f);
 			}
 		}
 

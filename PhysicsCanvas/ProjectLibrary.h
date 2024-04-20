@@ -13,6 +13,7 @@ namespace PhysicsCanvas {
 		~ProjectLib() {};
 		void CreateWindowSizeDependentResources();
 		void CreateDeviceDependentResources();
+		void Refresh();
 		Platform::String^ ChosenFile();
 		Platform::String^ ChosenPreset();
 		void Render();
@@ -24,7 +25,7 @@ namespace PhysicsCanvas {
 		std::vector<std::string> existingProjectPaths;
 		std::string chosenPath;
 		std::string presetPath;
-		bool newproj_window = false, preset_window = false, projfile_window = false;
+		bool newproj_window = false, preset_window = false;
 
 	};
 }
