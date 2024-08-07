@@ -40,10 +40,11 @@ namespace PhysicsCanvas {
 		}
 		Record Retrieve(float timestamp) {
 			if (records.size() == 0)	return NULL_RECORD;
-
+			
 			if (timestamp > records[records.size() - 1].time || timestamp < 0) {
 				return NULL_RECORD;
 			}
+			
 			return records[timestamp * 1000];
 		}
 		

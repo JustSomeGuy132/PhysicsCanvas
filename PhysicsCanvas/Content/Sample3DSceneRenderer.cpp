@@ -49,12 +49,6 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		fovAngleY *= 2.0f;
 	}
 
-	// Note that the OrientationTransform3D matrix is post-multiplied here
-	// in order to correctly orient the scene to match the display orientation.
-	// This post-multiplication step is required for any draw calls that are
-	// made to the swap chain render target. For draw calls to other targets,
-	// this transform should not be applied.
-
 	// This sample makes use of a right-handed coordinate system using row-major matrices.
 	projectionMat = XMMatrixPerspectiveFovRH(
 		fovAngleY,
@@ -333,9 +327,6 @@ void Sample3DSceneRenderer::Step() {
 					body1->RegisterCollision(body2, u_Time);
 					body2->RegisterCollision(body1, u_Time);
 				}
-				else {
-					
-				}
 			}
 			j++;
 		}
@@ -447,7 +438,46 @@ void Sample3DSceneRenderer::ObjectManager() {
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
+	
+	switch (selectedBody->GetType()) {
+	case PhysicsBody::Kinematic:
+		KinematicManager();
+		break;
+	}
 
+	ImGui::End();
+}
+
+void Sample3DSceneRenderer::KinematicManager() {
+	ImGui::Text("Position(x, y, z):");
+	float posBuf[3] = { selectedBody->GetPosition().x, selectedBody->GetPosition().y, selectedBody->GetPosition().z };
+	if (ImGui::InputFloat3("m##Pos", posBuf) && !is_stepping) {
+		selectedBody->SetTransform(XMFLOAT3(posBuf[0], posBuf[1], posBuf[2]), selectedBody->GetRotation(), selectedBody->GetDimensions());
+		TimeWipe();
+	}
+
+	ImGui::Text("Rotation(roll, pitch, yaw):");
+	float rotBuf[3] = { selectedBody->GetRotation().x, selectedBody->GetRotation().z, selectedBody->GetRotation().y };
+	if (ImGui::DragFloat3("rad##Rot", rotBuf, 0.001f) && !is_stepping) {
+		selectedBody->SetTransform(selectedBody->GetPosition(), XMFLOAT3(rotBuf[0], rotBuf[2], rotBuf[1]), selectedBody->GetDimensions());
+		TimeWipe();
+	}
+
+	ImGui::Text("Velocity(x, y, z):");
+	float velBuf[3] = { selectedBody->GetVelocity().x, selectedBody->GetVelocity().y, selectedBody->GetVelocity().z };
+	if (ImGui::InputFloat3("m/s##Vel", velBuf) && !is_stepping) {
+		selectedBody->SetVelocity(XMFLOAT3(velBuf[0], velBuf[1], velBuf[2]));
+		TimeWipe();
+	}
+
+	ImGui::Text("Angular velocity(roll, pitch, yaw):");
+	float angvelBuf[3] = { selectedBody->GetAngularVelocity().x, selectedBody->GetAngularVelocity().y, selectedBody->GetAngularVelocity().z };
+	if (ImGui::InputFloat3("rad/s##AVel", angvelBuf) && !is_stepping) {
+		selectedBody->SetAngVelocity(XMFLOAT3(angvelBuf[0], angvelBuf[1], angvelBuf[2]));
+		TimeWipe();
+	}
+
+	
 	float massBuf = selectedBody->GetMass();
 	ImGui::Text("Mass:"); ImGui::SameLine();
 	if (ImGui::InputFloat("kg", &massBuf, 0, 0, "%e") && !is_stepping) {
@@ -467,44 +497,16 @@ void Sample3DSceneRenderer::ObjectManager() {
 		}
 		break;
 	case BoundingShape::Sphere:
-	{
 		ImGui::Text("Radius:");
-		float rBuf = selectedBody->GetDimensions().x;
-		if (ImGui::InputFloat("m##Radius", &rBuf) && !is_stepping) {
-			selectedBody->ApplyScale(XMFLOAT3(rBuf, rBuf, rBuf));
-			TimeWipe();
+		{
+			float rBuf = selectedBody->GetDimensions().x;
+			if (ImGui::InputFloat("m##Radius", &rBuf) && !is_stepping) {
+				selectedBody->ApplyScale(XMFLOAT3(rBuf, rBuf, rBuf));
+				TimeWipe();
+			}
 		}
+		break;
 	}
-	break;
-	}
-
-	ImGui::Text("Position(x, y, z):");
-	float posBuf[3] = { selectedBody->GetPosition().x, selectedBody->GetPosition().y, selectedBody->GetPosition().z };
-	if (ImGui::InputFloat3("m##Pos", posBuf) && !is_stepping) {
-		selectedBody->SetTransform(XMFLOAT3(posBuf[0], posBuf[1], posBuf[2]), selectedBody->GetRotation(), selectedBody->GetDimensions());
-		TimeWipe();
-	}
-
-	ImGui::Text("Rotation(roll, pitch, yaw):");
-	float rotBuf[3] = { selectedBody->GetRotation().x, selectedBody->GetRotation().z, selectedBody->GetRotation().y };
-	if (ImGui::DragFloat3("rad##Rot", rotBuf, 0.001f) && !is_stepping) {
-		selectedBody->SetTransform(selectedBody->GetPosition(), XMFLOAT3(rotBuf[0], rotBuf[2], rotBuf[1]), selectedBody->GetDimensions());
-		TimeWipe();
-	}
-
-	ImGui::Text("Velocity(x, y, z):");
-	std::ostringstream velText;
-	velText << selectedBody->GetVelocity().x << "m/s, " << selectedBody->GetVelocity().y << "m/s, " << selectedBody->GetVelocity().z << "m/s\n"
-		<< "  Magnitude: " << PhysMaths::Magnitude(selectedBody->GetVelocity()) << "m/s";
-	ImGui::Text(velText.str().c_str());
-	velText.flush();
-
-	ImGui::Text("Angular velocity(roll, pitch, yaw):");
-	std::ostringstream angVelText;
-	angVelText << selectedBody->GetAngularVelocity().x << "rad/s, " << selectedBody->GetAngularVelocity().z << "rad/s, " << selectedBody->GetAngularVelocity().y << "rad/s"
-		<< "\n  Magnitude: " << PhysMaths::Magnitude(selectedBody->GetAngularVelocity()) << "rad/s";
-	ImGui::Text(angVelText.str().c_str());
-
 	ImGui::Text("Resultant force(x, y, z):");
 	XMFLOAT3 rForces = Force::ResultantF(selectedBody->ActiveForces(u_Time)).GetDirection();
 	std::ostringstream rfor;
@@ -512,7 +514,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 		<< "  Magnitude: " << PhysMaths::Magnitude(rForces) << "N";
 	ImGui::Text(rfor.str().c_str());
 	rfor.flush();
-	
+
 	ImGui::Text("Torque(roll, pitch, yaw):");
 	XMFLOAT3 torq = selectedBody->Torque(u_Time);
 	std::ostringstream torText;
@@ -598,28 +600,28 @@ void Sample3DSceneRenderer::ObjectManager() {
 						ImGui::Text("Acting from(x, y, z):");
 						static float eFfromBuf0 = eForce->GetFrom().x, eFfromBuf1 = eForce->GetFrom().y, eFfromBuf2 = eForce->GetFrom().z;
 
-						if (ImGui::DragFloat("m##ActingFromX", &eFfromBuf0, 0.001f, 
+						if (ImGui::DragFloat("m##ActingFromX", &eFfromBuf0, 0.001f,
 							selectedBody->GetBounds()->GetMinPoint().x, selectedBody->GetBounds()->GetMaxPoint().x) && !is_stepping
 							&& BoundingShape::PointCollidingWithObject(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2), selectedBody->GetBounds())
 							) {
 							eForce->SetFrom(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2));
 							TimeWipe();
 						}
-						if (ImGui::DragFloat("m##ActingFromY", &eFfromBuf1, 0.001f, 
+						if (ImGui::DragFloat("m##ActingFromY", &eFfromBuf1, 0.001f,
 							selectedBody->GetBounds()->GetMinPoint().y, selectedBody->GetBounds()->GetMaxPoint().y) && !is_stepping
 							&& BoundingShape::PointCollidingWithObject(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2), selectedBody->GetBounds())
 							) {
 							eForce->SetFrom(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2));
 							TimeWipe();
 						}
-						if (ImGui::DragFloat("m##ActingFromZ", &eFfromBuf2, 0.001f, 
+						if (ImGui::DragFloat("m##ActingFromZ", &eFfromBuf2, 0.001f,
 							selectedBody->GetBounds()->GetMinPoint().z, selectedBody->GetBounds()->GetMaxPoint().z) && !is_stepping
 							&& BoundingShape::PointCollidingWithObject(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2), selectedBody->GetBounds())
 							) {
 							eForce->SetFrom(XMFLOAT3(eFfromBuf0, eFfromBuf1, eFfromBuf2));
 							TimeWipe();
 						}
-					
+
 						break;
 					}
 				}
@@ -641,7 +643,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 				ImGui::Text("Force name:"); ImGui::SameLine();
 				ImGui::Text(f.GetId().c_str());
 				XMFLOAT3 torq = PhysMaths::Float3Cross(
-					XMFLOAT3(selectedBody->GetPosition().x - f.GetFrom().x, 
+					XMFLOAT3(selectedBody->GetPosition().x - f.GetFrom().x,
 						selectedBody->GetPosition().y - f.GetFrom().y, selectedBody->GetPosition().z - f.GetFrom().z), f.GetDirection());
 
 				std::ostringstream forceTxt;
@@ -656,13 +658,7 @@ void Sample3DSceneRenderer::ObjectManager() {
 			}
 		}
 	}
-	if (ImGui::CollapsingHeader("Entire forces array !!DEBUGGING!!")) {
-		for (Force f : selectedBody->GetForces()) {
-			ImGui::Text(f.GetId().c_str());
-		}
-	}
-	
-	ImGui::End();
+
 }
 
 void Sample3DSceneRenderer::GraphPlotter() {
@@ -790,7 +786,7 @@ void Sample3DSceneRenderer::Render() {
 	XMMATRIX viewMat = XMMatrixLookAtRH(
 		XMLoadFloat3(&controller->get_Position()), XMLoadFloat3(&controller->get_LookPoint()), up);
 
-	for each (std::shared_ptr<PhysicsBody> body in pBodies) {
+	for (std::shared_ptr<PhysicsBody> body : pBodies) {
 		body->Render(viewMat * projectionMat);
 	}
 	
@@ -806,6 +802,8 @@ void Sample3DSceneRenderer::Render() {
 		}
 		i++;
 	}
+	if (i == 1)
+		ImGui::Text("Go to Edit to add a new object");
 	ImGui::End();
 
 	ImGui::SetNextWindowPos(ImVec2(12, m_deviceResources->GetOutputSize().Height * 0.68f));

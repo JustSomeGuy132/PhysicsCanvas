@@ -24,10 +24,9 @@ PhysicsCanvasMain::PhysicsCanvasMain(const std::shared_ptr<DX::DeviceResources>&
 	m_sceneRenderer = std::unique_ptr<Sample3DSceneRenderer>(new Sample3DSceneRenderer(m_deviceResources));
 	m_fpsTextRenderer = std::unique_ptr<SampleFpsTextRenderer>(new SampleFpsTextRenderer(m_deviceResources));
 
-	/* e.g. for 60 FPS fixed timestep update logic, call:
-	m_timer.SetFixedTimeStep(true);
-	m_timer.SetTargetElapsedSeconds(1.0 / 60);
-	*/
+	/*m_timer.SetFixedTimeStep(true);
+	m_timer.SetTargetElapsedSeconds(0.001f);*/
+	
 }
 
 PhysicsCanvasMain::~PhysicsCanvasMain()

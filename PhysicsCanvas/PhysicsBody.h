@@ -16,10 +16,15 @@ using namespace DirectX;
 namespace PhysicsCanvas {
 	class PhysicsBody {
 	public:
-		void Create(const UINT shape, const std::shared_ptr<DX::DeviceResources>& deviceResources) {
+		static enum o_type {
+			Kinematic,
+		};
+
+		virtual void Create(const UINT shape, const std::shared_ptr<DX::DeviceResources>& deviceResources) {
 			CreateMesh(shape, deviceResources);
 			position = XMFLOAT3();
 			rotation = XMFLOAT3();
+			obj_type = Kinematic;
 			
 			switch (shape) {
 			case CUBE:
@@ -39,7 +44,7 @@ namespace PhysicsCanvas {
 				break;
 			}
 			//if its not the floor, give a default mass of 1kg. else, make it very large
-			if(shape != FLOOR) {
+			if (shape != FLOOR) {
 				mass = 1.0f;
 				Force weight(mass);
 				weight.SetFrom(position);
@@ -53,10 +58,12 @@ namespace PhysicsCanvas {
 		std::string GetName() { return name; }
 		void GiveName(std::string n) { name = n; }
 
-		void CreateMesh(const UINT shape, const std::shared_ptr<DX::DeviceResources>& deviceResources) {
+		o_type GetType() { return obj_type; }
+
+		virtual void CreateMesh(const UINT shape, const std::shared_ptr<DX::DeviceResources>& deviceResources) {
 			_mesh.Create(shape, deviceResources);
 		}
-		void Render(XMMATRIX viewprojMat) {
+		virtual void Render(XMMATRIX viewprojMat) {
 			_mesh.Render(viewprojMat);
 		}
 		Mesh& GetMesh() { return _mesh; }
@@ -95,10 +102,6 @@ namespace PhysicsCanvas {
 					XMFLOAT3 rotPosChange(PhysMaths::RotateVector(PhysMaths::Float3Minus(eForce->GetFrom(), position), rotChange));
 					eForce->SetFrom(PhysMaths::Float3Add(PhysMaths::Float3Add(eForce->GetFrom(), posChange), rotPosChange));
 				}
-			}
-			for (Force& f : forces) {
-				XMFLOAT3 rotPosChange(PhysMaths::RotateVector(PhysMaths::Float3Minus(f.GetFrom(), position), rotChange));
-				f.SetFrom(PhysMaths::Float3Add(PhysMaths::Float3Add(f.GetFrom(), posChange), rotPosChange));
 			}
 
 			position = pos;
@@ -396,6 +399,8 @@ namespace PhysicsCanvas {
 		XMFLOAT3 position;
 		XMFLOAT3 rotation;
 		XMFLOAT3 dimensions;
+
+		o_type obj_type;
 
 		//for collisions, register the collision body ~~as well as the name of the subsequent collision~~
 		std::vector<std::shared_ptr<PhysicsBody>> collisions;

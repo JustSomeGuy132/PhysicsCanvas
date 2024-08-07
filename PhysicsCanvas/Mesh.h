@@ -8,7 +8,6 @@
 #include <assimp\postprocess.h>
 #include <assimp\scene.h>
 #include <fstream>
-#include "SubMesh.h"
 
 #define FLOOR 1
 #define CUBE 2
@@ -42,56 +41,8 @@ namespace PhysicsCanvas {
 
 		void SetColour(DirectX::XMFLOAT3 col);
 
-		void LoadModel(const std::string& filepath) {
-			Assimp::Importer importer;
-			const aiScene* pScene = importer.ReadFile(
-				filepath.c_str(), aiProcess_Triangulate | aiProcess_JoinIdenticalVertices
-			);
-			if (pScene == nullptr) {
-				OutputDebugString(importer.GetErrorString());
-				return;
-			}
-			ProcessNode(pScene->mRootNode, pScene);
-		}
-		void ProcessNode(aiNode* node, const aiScene* scene) {
-			for (UINT i = 0; i < node->mNumMeshes; i++) {
-				aiMesh* mesh_ = scene->mMeshes[node->mMeshes[i]];
-				Smeshes.push_back(ProcessMesh(mesh_, scene));
-			}
-			for (UINT i = 0; i < node->mNumChildren; i++) {
-				ProcessNode(node->mChildren[i], scene);
-			}
-		}
-		SubMesh ProcessMesh(aiMesh* mesh, const aiScene* scene) {
-			std::vector<VertexPositionColor> vertices;
-			vertices.reserve(mesh->mNumVertices);
-			std::vector<unsigned short> indices;
-			
-			//getting vertex data
-			for (UINT i = 0; i < mesh->mNumVertices; i++) {
-				VertexPositionColor vert;
-				vert.pos.x = mesh->mVertices[i].x;
-				vert.pos.y = mesh->mVertices[i].y;
-				vert.pos.z = mesh->mVertices[i].z;
-
-				//if (mesh->mTextureCoords[0]) {
-				vert.color = DirectX::XMFLOAT3(0.5f, 0.5f, 0.5f);
-				//}
-				vertices.push_back(vert);
-			}
-			
-			//getting index data
-			for (UINT i = 0; i < mesh->mNumFaces; i++) {
-				aiFace face = mesh->mFaces[i];
-				for (UINT j = 0; j < face.mNumIndices; j++) {
-					indices.push_back(face.mIndices[j]);
-				}
-			}
-
-			return SubMesh(m_deviceResources, vertices, indices);
-		}
+		
 	private:
-		std::vector<SubMesh> Smeshes;
 		uint32 m_indexCount;
 		bool m_loadingComplete;
 		DirectX::XMMATRIX worldMat = DirectX::XMMatrixIdentity();

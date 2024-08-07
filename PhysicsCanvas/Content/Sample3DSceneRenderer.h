@@ -30,7 +30,10 @@ namespace PhysicsCanvas
 		void Render();
 		void CreateNewMesh(const UINT shape);
 		void RaycastFromClick(float x, float y);
+
 		void ObjectManager();
+		void KinematicManager();
+
 		void TimeManager();
 		void GraphPlotter();
 		void TimeWipe();

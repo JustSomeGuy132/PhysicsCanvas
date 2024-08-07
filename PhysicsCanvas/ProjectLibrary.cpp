@@ -68,17 +68,21 @@ void ProjectLib::Render() {
 	ImGui::Button("Info");		ImGui::SameLine();
 	ImGui::Button("Settings");
 	//Buttons to go to existing projects registered
-	int count = 0;
-	if (ImGui::Button("New simulation\nproject", ImVec2(120, 120)))
+	ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(3.0f / 7.0f, 0.6f, 0.6f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(3.0f / 7.0f, 0.7f, 0.7f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(3.0f / 7.0f, 0.8f, 0.8f));
+	if (ImGui::Button("New simulation\nproject", ImVec2(160, 160)))
 		newproj_window = true;
+	ImGui::PopStyleColor(3);
 
+	int count = 1;
 	ImGui::SameLine(); count++;
 	for (std::string proj : existingProjectPaths) {
-		if (ImGui::Button(proj.c_str(), ImVec2(120, 120)))
+		if (ImGui::Button(proj.c_str(), ImVec2(160, 160)))
 			chosenPath = proj;
 		//Ensure that there are up to 5 buttons per row
 		count++;
-		if (count < ImGui::GetWindowSize().x / 120) {
+		if (count < ImGui::GetWindowSize().x / 160.0f) {
 			ImGui::SameLine();
 		}
 		else count = 0;
@@ -170,7 +174,7 @@ void ProjectLib::PresetSelectorWindow() {
 	ImGui::SetWindowFocus();
 	ImGui::TextDisabled("(!!)");
 	if (ImGui::BeginItemTooltip()) {
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 0.35f);
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
 		ImGui::TextUnformatted("Your preset file MUST be in the local storage directory for the program. See the predicted path to find that folder.");
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
