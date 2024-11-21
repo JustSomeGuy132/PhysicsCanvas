@@ -39,11 +39,11 @@ namespace PhysicsCanvas
 		void TimeWipe();
 		void TimeJump(float time);
 
-		float u_Time;
-		float latest_Time;
 		void Step();
 	
 	private:
+		float u_Time;
+		float latest_Time;
 		Windows::UI::Core::CoreWindow^ wnd;
 		MoveLookControls^ controller;
 		DirectX::XMMATRIX projectionMat;

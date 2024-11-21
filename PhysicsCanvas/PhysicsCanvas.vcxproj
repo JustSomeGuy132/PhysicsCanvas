@@ -393,6 +393,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
+    <ClCompile Include="BoundingShape.cpp" />
     <ClCompile Include="Common\DeviceResources.cpp" />
     <ClCompile Include="im-neo-sequencer-main\imgui_neo_internal.cpp" />
     <ClCompile Include="im-neo-sequencer-main\imgui_neo_sequencer.cpp" />
@@ -408,6 +409,7 @@
     <ClCompile Include="implot-master\implot_items.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MoveLookControls.cpp" />
+    <ClCompile Include="PhysicsBody.cpp" />
     <ClCompile Include="PhysicsCanvasMain.cpp" />
     <ClCompile Include="Content\SampleFpsTextRenderer.cpp" />
     <ClCompile Include="Content\Sample3DSceneRenderer.cpp" />
