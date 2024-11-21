@@ -20,7 +20,10 @@ namespace PhysicsCanvas {
 		void NewFileWindow();
 		void PresetSelectorWindow();
 
+		Windows::Storage::StorageFolder^ getLocalFolder() { return localFolder; }
+
 	private:
+		Windows::Storage::StorageFolder^ localFolder;
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 		std::vector<std::string> existingProjectPaths;
 		std::string chosenPath;

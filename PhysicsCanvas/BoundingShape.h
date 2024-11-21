@@ -1,7 +1,6 @@
 #pragma once
 #include "pch.h"
 #include "..\Common\DirectXHelper.h"
-#include "PhysicsBody.h"
 #include "PhysMaths.h"
 
 using namespace DirectX;

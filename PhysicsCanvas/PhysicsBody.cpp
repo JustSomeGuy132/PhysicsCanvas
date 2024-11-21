@@ -37,8 +37,6 @@ void PhysicsBody::Create(const UINT shape, const std::shared_ptr<DX::DeviceResou
 	}
 }
 
-Mesh& PhysicsBody::GetMesh() { return _mesh; }
-
 std::string PhysicsBody::BodyData() {
 	std::ostringstream data;
 	data << "OBJECT KINEMATIC\n"

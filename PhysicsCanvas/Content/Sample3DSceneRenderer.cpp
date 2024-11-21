@@ -79,9 +79,8 @@ void Sample3DSceneRenderer::SaveToFile() {
 		i++;
 	}
 	std::string d = data.str();
-	Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
 	if (currentFile == "NONE") {
-		concurrency::create_task(localFolder->CreateFileAsync("Unnamed simulation.psim", Windows::Storage::CreationCollisionOption::GenerateUniqueName))
+		concurrency::create_task(library->getLocalFolder()->CreateFileAsync("Unnamed simulation.psim", Windows::Storage::CreationCollisionOption::GenerateUniqueName))
 		.then([this, d](Windows::Storage::StorageFile^ newFile) {
 			if (newFile) {
 				std::wstring Wfilename(newFile->Name->Begin());
@@ -102,7 +101,7 @@ void Sample3DSceneRenderer::SaveToFile() {
 		});
 	}
 	else {
-		concurrency::create_task(localFolder->GetFileAsync(currentFile))
+		concurrency::create_task(library->getLocalFolder()->GetFileAsync(currentFile))
 		.then([this, d](Windows::Storage::StorageFile^ saveFile) {
 			if (saveFile) {
 				std::wstring w_str(d.begin(), d.end());
@@ -279,8 +278,7 @@ void Sample3DSceneRenderer::OnDataObtained() {
 	if (currentFile != "NONE") {
 		if (library->ChosenPreset() != "") {
 			//load preset data
-			Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
-			concurrency::create_task(localFolder->GetFileAsync(library->ChosenPreset()))
+			concurrency::create_task(library->getLocalFolder()->GetFileAsync(library->ChosenPreset()))
 			.then([&](Windows::Storage::StorageFile^ preset_file) {
 				concurrency::create_task(Windows::Storage::FileIO::ReadTextAsync(preset_file))
 				.then([&](Platform::String^ data) {
@@ -293,8 +291,7 @@ void Sample3DSceneRenderer::OnDataObtained() {
 		}
 		else {
 			//load file data
-			Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
-			concurrency::create_task(localFolder->GetFileAsync(currentFile))
+			concurrency::create_task(library->getLocalFolder()->GetFileAsync(currentFile))
 			.then([&](Windows::Storage::StorageFile^ current_file) {
 				concurrency::create_task(Windows::Storage::FileIO::ReadTextAsync(current_file))
 				.then([&](Platform::String^ data) {
@@ -791,7 +788,7 @@ void Sample3DSceneRenderer::Render() {
 	}
 	
 	ImGui::SetNextWindowPos(ImVec2(12, 60));
-	ImGui::SetNextWindowSize(ImVec2(110, 50 * (pBodies.size() + 1) > 120? 120 : 50 * (pBodies.size() + 1)));
+	ImGui::SetNextWindowSize(ImVec2(170, 50 * (pBodies.size() + 1) > 120? 120 : 50 * (pBodies.size() + 1)));
 	ImGui::Begin("All objects");
 	int i = 0;
 	for (std::shared_ptr<PhysicsBody> b : pBodies) {
@@ -803,7 +800,7 @@ void Sample3DSceneRenderer::Render() {
 		i++;
 	}
 	if (i == 1)
-		ImGui::Text("Go to Edit to add a new object");
+		ImGui::TextWrapped("Go to Edit to add a new object");
 	ImGui::End();
 
 	ImGui::SetNextWindowPos(ImVec2(12, m_deviceResources->GetOutputSize().Height * 0.68f));

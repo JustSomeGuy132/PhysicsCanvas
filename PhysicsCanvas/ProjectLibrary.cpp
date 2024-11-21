@@ -7,6 +7,7 @@
 
 using namespace PhysicsCanvas;
 using namespace concurrency;
+using namespace Windows::Storage;
 
 ProjectLib::ProjectLib(const std::shared_ptr<DX::DeviceResources>& deviceResources) : m_deviceResources(deviceResources), chosenPath("")
 {
@@ -18,11 +19,13 @@ void ProjectLib::CreateWindowSizeDependentResources() {
 	ImGuiIO& io = ImGui::GetIO();
 	io.DisplaySize = { m_deviceResources->GetOutputSize().Width, m_deviceResources->GetOutputSize().Height };
 }
+
 void ProjectLib::CreateDeviceDependentResources() {
 	// Open or create the file for reading and writing (or open it if it already exists)
-	Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
+	localFolder = ApplicationData::Current->LocalFolder;
+
 	create_task(localFolder->GetFilesAsync())
-	.then([&](Windows::Foundation::Collections::IVectorView<Windows::Storage::StorageFile^>^ files) {
+	.then([&](Windows::Foundation::Collections::IVectorView<StorageFile^>^ files) {
 		for (int i = 0; i < files->Size; i++) {
 			std::wstring Wtitle(files->GetAt(i)->Name->Begin());
 			std::string title(Wtitle.begin(), Wtitle.end());
@@ -121,7 +124,7 @@ void ProjectLib::NewFileWindow() {
 		ImGui::EndTooltip();
 	}
 	static char nameBuffer[128];
-	std::filesystem::path currentPath = std::wstring(Windows::Storage::ApplicationData::Current->LocalFolder->Path->Begin());
+	std::filesystem::path currentPath = std::wstring(localFolder->Path->Begin());
 
 	static std::filesystem::path directoryPath = currentPath / (std::string(nameBuffer) + ".psim");
 	static std::string directoryTxt = directoryPath.string();
@@ -151,10 +154,9 @@ void ProjectLib::NewFileWindow() {
 		else if (std::string(nameBuffer).length() == 0 || directoryTxt.size() == 0)
 			MessageBox(NULL, "Cannot proceed: must enter a title.", "Cannot create simulation", MB_ICONERROR | MB_OK);
 		else {
-			Windows::Storage::StorageFolder^ localFolder = Windows::Storage::ApplicationData::Current->LocalFolder;
 			create_task(localFolder->CreateFileAsync(ref new Platform::String(directoryPath.filename().wstring().c_str()), 
-																					Windows::Storage::CreationCollisionOption::GenerateUniqueName)
-			).then([&](Windows::Storage::StorageFile^ file) {
+																					CreationCollisionOption::GenerateUniqueName)
+			).then([&](StorageFile^ file) {
 				chosenPath = directoryPath.filename().string();
 				if (e == 0)
 					presetPath = "";
